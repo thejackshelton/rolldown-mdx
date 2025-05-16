@@ -5,7 +5,7 @@ import remarkFrontmatter from "remark-frontmatter";
 import remarkMdxFrontmatter from "remark-mdx-frontmatter";
 import { VFile } from "vfile";
 import matter from "gray-matter";
-import path from "node:path";
+import { resolve, dirname, extname, relative as relativePath } from "pathe";
 
 export interface MdxJsxConfig {
 	jsxLib?: {
@@ -59,12 +59,12 @@ export async function bundleMDX({
 	if (typeof source === "string") {
 		vfile = new VFile({
 			value: source,
-			path: path.resolve(cwd, entryFileName),
+			path: resolve(cwd, entryFileName),
 		});
 	} else {
 		vfile = source;
 		if (!vfile.path) {
-			vfile.path = path.resolve(cwd, entryFileName);
+			vfile.path = resolve(cwd, entryFileName);
 		}
 	}
 
@@ -92,32 +92,26 @@ export async function bundleMDX({
 				return entryFileName;
 			}
 			if (importer) {
-				const importerDir = path.dirname(
+				const importerDir = dirname(
 					importer === entryFileName ? vfile.path : importer,
 				);
-				let resolvedPath = path.resolve(importerDir, id);
-				if (!path.extname(resolvedPath) && files[`${resolvedPath}.tsx`]) {
-					resolvedPath = `${resolvedPath}.tsx`;
-				} else if (!path.extname(resolvedPath) && files[`${resolvedPath}.ts`]) {
-					resolvedPath = `${resolvedPath}.ts`;
-				} else if (!path.extname(resolvedPath) && files[`${resolvedPath}.js`]) {
-					resolvedPath = `${resolvedPath}.js`;
-				} else if (
-					!path.extname(resolvedPath) &&
-					files[`${resolvedPath}.jsx`]
-				) {
-					resolvedPath = `${resolvedPath}.jsx`;
-				} else if (
-					!path.extname(resolvedPath) &&
-					files[`${resolvedPath}.mdx`]
-				) {
-					resolvedPath = `${resolvedPath}.mdx`;
+				let resolved = resolve(importerDir, id);
+				if (!extname(resolved) && files[`${resolved}.tsx`]) {
+					resolved = `${resolved}.tsx`;
+				} else if (!extname(resolved) && files[`${resolved}.ts`]) {
+					resolved = `${resolved}.ts`;
+				} else if (!extname(resolved) && files[`${resolved}.js`]) {
+					resolved = `${resolved}.js`;
+				} else if (!extname(resolved) && files[`${resolved}.jsx`]) {
+					resolved = `${resolved}.jsx`;
+				} else if (!extname(resolved) && files[`${resolved}.mdx`]) {
+					resolved = `${resolved}.mdx`;
 				}
 
-				const relativePath = `./${path.relative(cwd, resolvedPath).replace(/^\\.\\\\/, "")}`;
+				const relative = `./${relativePath(cwd, resolved).replace(/^\\.\\\\/, "")}`;
 
-				if (files[relativePath]) {
-					return relativePath;
+				if (files[relative]) {
+					return relative;
 				}
 				// Handle node_modules like imports from files map
 				if (files[id]) {
