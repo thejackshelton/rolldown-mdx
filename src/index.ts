@@ -6,6 +6,7 @@ import remarkMdxFrontmatter from "remark-mdx-frontmatter";
 import { VFile } from "vfile";
 import matter from "gray-matter";
 import { resolve, dirname, extname, relative as relativePath } from "pathe";
+import { qwikRollup } from "@builder.io/qwik/optimizer";
 
 export interface MdxJsxConfig {
 	jsxLib?: {
@@ -210,7 +211,13 @@ export async function bundleMDX({
 
 	const inputOpts: InputOptions = {
 		input: entryPointId, // Input is the virtual MDX entry
-		plugins: [inMemoryPlugin, mdx(mdxPluginOpts)],
+		plugins: [
+			inMemoryPlugin,
+			mdx(mdxPluginOpts),
+			qwikRollup({
+				entryStrategy: { type: "inline" },
+			}),
+		],
 		external: Object.keys(globals),
 		// Rolldown handles JSX in .tsx files (like demo.tsx) using Qwik's automatic runtime
 		jsx: jsxConfig?.jsxLib?.package // If jsxLib is configured, assume we want Qwik JSX processing
@@ -233,6 +240,7 @@ export async function bundleMDX({
 		globals: globals,
 		exports: "named",
 		sourcemap: false,
+		inlineDynamicImports: true,
 	};
 	console.log("[bundleMDX] Rolldown Output Options:", outputOpts);
 

@@ -42,9 +42,11 @@ Here's a **neat** demo:
   `.trim();
 
 	const demoTsx = `
-  export const Demo = () => {
+
+  import { component$ } from '@builder.io/qwik';
+  export const Demo = component$(() => {
   return <div>mdx-bundler with Qwik's runtime!</div>;
-};
+});
   `.trim();
 
 	test("smoke test for qwik", async () => {
