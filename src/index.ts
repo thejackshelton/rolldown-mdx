@@ -53,18 +53,39 @@ export async function bundleMDX({
 	globals = {},
 	jsxConfig = {},
 }: BundleMDXOptions): Promise<BundleMDXResult> {
-	const entryFileName = "entry.mdx";
+	console.log("[bundleMDX] Initial options:", {
+		source: typeof source === "string" ? "string" : "VFile",
+		files: Object.keys(files),
+		cwd,
+		hasMdxOptionsFn: !!mdxOptionsFn,
+		globals,
+		jsxConfig,
+	});
+	if (typeof source === "string") {
+		console.log(
+			"[bundleMDX] Source string (first 100 chars):",
+			source.substring(0, 100),
+		);
+	} else {
+		console.log("[bundleMDX] Source VFile path:", source.path);
+		console.log(
+			"[bundleMDX] Source VFile value (first 100 chars):",
+			String(source.value).substring(0, 100),
+		);
+	}
+
+	const entryPointId = "entry.mdx"; // Standard virtual module name
 	let vfile: VFile;
 
 	if (typeof source === "string") {
 		vfile = new VFile({
 			value: source,
-			path: resolve(cwd, entryFileName),
+			path: resolve(cwd, "source.mdx"), // Conceptual path for VFile
 		});
 	} else {
 		vfile = source;
 		if (!vfile.path) {
-			vfile.path = resolve(cwd, entryFileName);
+			vfile.path = resolve(cwd, "source.mdx");
 		}
 	}
 
@@ -75,6 +96,12 @@ export async function bundleMDX({
 		...restOfMatter
 	} = matter(String(vfile.value));
 	const frontmatter = frontmatterData || {};
+	console.log("[bundleMDX] Extracted frontmatter:", frontmatter);
+	console.log(
+		"[bundleMDX] MDX content after frontmatter (first 100 chars):",
+		mdxContentAfterFrontmatter.substring(0, 100),
+	);
+
 	vfile.value = mdxContentAfterFrontmatter; // Update vfile content to be without frontmatter for MDX plugin
 	// Store the full matter object if needed, similar to how vfile-matter might have attached it
 	// Or decide if only frontmatter and the stripped content are needed moving forward.
@@ -88,48 +115,78 @@ export async function bundleMDX({
 	const inMemoryPlugin = {
 		name: "in-memory-loader",
 		resolveId(id: string, importer?: string) {
-			if (id === entryFileName || id === `./${entryFileName}`) {
-				return entryFileName;
-			}
-			if (importer) {
-				const importerDir = dirname(
-					importer === entryFileName ? vfile.path : importer,
+			console.log(
+				`[inMemoryPlugin.resolveId] Attempting to resolve: '${id}' from importer: '${importer}'`,
+			);
+			if (id === entryPointId || id === `./${entryPointId}`) {
+				console.log(
+					`[inMemoryPlugin.resolveId] Resolved '${id}' to entry point '${entryPointId}'`,
 				);
-				let resolved = resolve(importerDir, id);
-				if (!extname(resolved) && files[`${resolved}.tsx`]) {
-					resolved = `${resolved}.tsx`;
-				} else if (!extname(resolved) && files[`${resolved}.ts`]) {
-					resolved = `${resolved}.ts`;
-				} else if (!extname(resolved) && files[`${resolved}.js`]) {
-					resolved = `${resolved}.js`;
-				} else if (!extname(resolved) && files[`${resolved}.jsx`]) {
-					resolved = `${resolved}.jsx`;
-				} else if (!extname(resolved) && files[`${resolved}.mdx`]) {
-					resolved = `${resolved}.mdx`;
+				return entryPointId;
+			}
+			// Resolve other files from the 'files' map
+			if (importer) {
+				const baseDir =
+					importer === entryPointId ? dirname(vfile.path) : dirname(importer);
+				let resolvedPath = resolve(baseDir, id);
+
+				// Attempt to match with extensions if not explicitly provided
+				const extensions = [".tsx", ".ts", ".jsx", ".js", ".mdx", ".json"];
+				if (!extname(resolvedPath)) {
+					for (const ext of extensions) {
+						if (files[`./${relativePath(cwd, resolvedPath + ext)}`]) {
+							resolvedPath = resolvedPath + ext;
+							break;
+						}
+						if (files[resolvedPath + ext]) {
+							// for absolute-like paths in files keys
+							resolvedPath = resolvedPath + ext;
+							break;
+						}
+					}
 				}
 
-				const relative = `./${relativePath(cwd, resolved).replace(/^\\.\\\\/, "")}`;
-
-				if (files[relative]) {
-					return relative;
+				const relativeKey = `./${relativePath(cwd, resolvedPath)}`;
+				if (files[relativeKey]) {
+					console.log(
+						`[inMemoryPlugin.resolveId] Resolved '${id}' to relativeKey '${relativeKey}' from files map`,
+					);
+					return relativeKey;
 				}
-				// Handle node_modules like imports from files map
-				if (files[id]) {
-					return id;
+				if (files[resolvedPath]) {
+					console.log(
+						`[inMemoryPlugin.resolveId] Resolved '${id}' to resolvedPath '${resolvedPath}' from files map (absolute-like)`,
+					);
+					return resolvedPath;
 				}
 			}
+			// Fallback for top-level entries in files map (e.g. node_modules)
 			if (files[id]) {
+				console.log(
+					`[inMemoryPlugin.resolveId] Resolved '${id}' directly from files map (globals/node_modules)`,
+				);
 				return id;
 			}
+			console.log(`[inMemoryPlugin.resolveId] Failed to resolve '${id}'`);
 			return null;
 		},
 		load(id: string) {
-			if (id === entryFileName) {
-				return String(vfile.value);
+			console.log(`[inMemoryPlugin.load] Attempting to load: '${id}'`);
+			if (id === entryPointId) {
+				console.log(
+					`[inMemoryPlugin.load] Loading content for entry point '${id}' (first 100 chars):`,
+					mdxContentAfterFrontmatter.substring(0, 100),
+				);
+				return mdxContentAfterFrontmatter; // Provide the MDX content for the entry point
 			}
 			if (files[id]) {
+				console.log(
+					`[inMemoryPlugin.load] Loading content for '${id}' from files map (first 100 chars):`,
+					files[id].substring(0, 100),
+				);
 				return files[id];
 			}
+			console.log(`[inMemoryPlugin.load] Failed to load '${id}'`);
 			return null;
 		},
 	};
@@ -137,51 +194,84 @@ export async function bundleMDX({
 	let mdxPluginOpts: MdxPluginOptions = {
 		remarkPlugins: [remarkFrontmatter, remarkMdxFrontmatter],
 		rehypePlugins: [],
-		jsx: jsxConfig?.jsxRuntime?.package ? true : undefined, // true enables automatic runtime usually
-		jsxImportSource: jsxConfig?.jsxRuntime?.package,
-		// jsxRuntime: 'automatic', // Usually default with jsxImportSource
-		providerImportSource: jsxConfig?.jsxLib?.package,
+		jsx: false, // Explicitly set to false to get function calls from MDX plugin
+		// Adjust jsxImportSource for MDX plugin: it appends '/jsx-runtime'.
+		// So, provide the base package path (jsxLib.package) here.
+		jsxImportSource: jsxConfig?.jsxLib?.package, // e.g., '@builder.io/qwik'
+		jsxRuntime: "automatic", // MDX plugin will use automatic runtime logic
+		providerImportSource: jsxConfig?.jsxLib?.package, // For MDXProvider context
 	};
 
 	if (mdxOptionsFn) {
 		mdxPluginOpts = mdxOptionsFn(mdxPluginOpts, frontmatter);
 	}
+	console.log("[bundleMDX] Final MDX Plugin Options:", mdxPluginOpts);
 
 	const inputOpts: InputOptions = {
-		input: entryFileName,
+		input: entryPointId, // Input is the virtual MDX entry
 		plugins: [inMemoryPlugin, mdx(mdxPluginOpts)],
 		external: Object.keys(globals),
-		// We might need to configure Rolldown's internal JSX/TS transforms
-		// if @mdx-js/rollup doesn't fully handle dependencies.
-		// For now, relying on @mdx-js/rollup to process MDX and its JS/TS imports.
+		jsx: jsxConfig?.jsxRuntime?.package
+			? {
+					mode: "automatic",
+					// If Rolldown's JSX transform also appends '/jsx-runtime' to jsxImportSource,
+					// then provide the base package path here as well.
+					jsxImportSource: jsxConfig.jsxLib?.package, // e.g., '@builder.io/qwik'
+					importSource: jsxConfig.jsxLib?.package, // For classic fallback, e.g., '@builder.io/qwik'
+				}
+			: undefined,
 	};
+	console.log(
+		"[bundleMDX] Rolldown Input Options:",
+		JSON.stringify(inputOpts, null, 2),
+	);
 
 	const outputOpts: OutputOptions = {
-		format: "esm",
+		format: "iife",
+		name: "__MDX_CONTENT__",
 		globals: globals,
-		sourcemap: false, // Keep it simple for now
+		exports: "named",
+		sourcemap: false,
 	};
+	console.log("[bundleMDX] Rolldown Output Options:", outputOpts);
 
 	let bundledCode = "";
 	const errors: Error[] = [];
 	const warnings: Error[] = [];
 
 	try {
+		console.log("[bundleMDX] Calling rolldown(inputOpts)...");
 		const bundle = await rolldown(inputOpts);
+		console.log(
+			"[bundleMDX] Rolldown build successful. Bundle object (keys):",
+			Object.keys(bundle),
+		);
+		// console.log('[bundleMDX] Rolldown bundle warnings:', bundle.warnings); // If Rolldown exposes warnings this way
 
-		// Capture warnings from the build
-		// Rolldown's API for warnings/errors might differ from esbuild.
-		// This is a placeholder based on typical bundler patterns.
-		// if (bundle.warnings) warnings.push(...bundle.warnings.map(w => new Error(w.text)));
-
+		console.log("[bundleMDX] Calling bundle.write(outputOpts)...");
 		const { output } = await bundle.write(outputOpts);
+		console.log(
+			"[bundleMDX] Rolldown write successful. Output (length):",
+			output.length,
+		);
+
 		if (output.length > 0 && output[0].type === "chunk") {
 			bundledCode = output[0].code;
+			console.log(
+				"[bundleMDX] Bundled code (first 300 chars):",
+				bundledCode.substring(0, 300),
+			);
 			// if (output[0].map) { /* handle sourcemap if needed */ }
 		} else {
-			throw new Error("No chunk generated by Rolldown");
+			console.error(
+				"[bundleMDX] No chunk generated by Rolldown or unexpected output type.",
+			);
+			throw new Error(
+				"No chunk generated by Rolldown or unexpected output type",
+			);
 		}
 	} catch (error: unknown) {
+		console.error("[bundleMDX] Error during Rolldown bundling/writing:", error);
 		// Rolldown might throw an error object that contains more details
 		// or might be a string. We'll capture it.
 		if (error instanceof Error) {
@@ -194,11 +284,18 @@ export async function bundleMDX({
 		// throw error; // Or return it in the result
 	}
 
-	return {
+	const result: BundleMDXResult = {
 		code: bundledCode,
 		frontmatter,
 		matter: matterObject, // Return the object from gray-matter
 		errors,
 		warnings,
 	};
+	console.log("[bundleMDX] Returning result:", {
+		codeLength: result.code.length,
+		frontmatter: result.frontmatter,
+		errors: result.errors,
+		warnings: result.warnings,
+	});
+	return result;
 }

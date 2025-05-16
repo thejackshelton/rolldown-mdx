@@ -3,30 +3,53 @@
 // This client aims to be framework-agnostic in its type signature here.
 type AnyComponent<Props = Record<string, unknown>> = (props: Props) => unknown; // More generic than JSX.Element
 
+const IIFE_GLOBAL_NAME = "__MDX_CONTENT__";
+
 /**
  * A simple factory to create a component from the bundled MDX code.
- * @param code The bundled MDX code (string).
+ * @param code The bundled MDX code (string), expected to be an IIFE.
  * @param globals An object of global variables to make available to the MDX component.
- *                For Qwik, this would include Qwik itself and its JSX runtime.
  * @returns The MDX component.
  */
 export function getMDXComponent<Props = Record<string, unknown>>(
 	code: string,
 	globals: Record<string, unknown> = {},
 ): AnyComponent<Props> {
-	const scope = { ...globals };
-	const keys = Object.keys(scope);
-	const values = Object.values(scope);
+	// Backup existing global properties that might be overwritten by our globals
+	const G =
+		typeof globalThis !== "undefined"
+			? globalThis
+			: ((typeof window !== "undefined" ? window : global) as any);
+	const originalGlobals: Record<string, any> = {};
+	for (const key in globals) {
+		if (Object.prototype.hasOwnProperty.call(G, key)) {
+			originalGlobals[key] = G[key];
+		}
+		G[key] = globals[key];
+	}
 
-	// Sanitize keys to be valid variable names if they aren't already.
-	// Though typically, keys from `globals` like `Qwik` or `_jsx_runtime` are valid.
-	const fn = new Function(...keys, `return ${code}`);
-	const mdxModule = fn(...values);
+	// Create the function to execute the IIFE code.
+	// The IIFE will attach its exports to G[IIFE_GLOBAL_NAME].
+	const fn = new Function(code);
+	fn();
 
-	// The bundled code from MDX typically exports the component as default.
-	if (typeof mdxModule.default !== "function") {
+	const mdxModule = G[IIFE_GLOBAL_NAME];
+
+	// Restore original global properties and cleanup
+	for (const key in globals) {
+		if (originalGlobals[key] !== undefined) {
+			G[key] = originalGlobals[key];
+		} else {
+			delete G[key];
+		}
+	}
+	delete G[IIFE_GLOBAL_NAME];
+
+	if (!mdxModule || typeof mdxModule.default !== "function") {
 		throw new Error(
-			`MDX bundled code does not export a default function component.\nReceived: ${typeof mdxModule.default}\nCode: ${code.slice(0, 200)}...`,
+			`MDX Bundling Error: Bundled code did not produce the expected component. 
+			 Check for build errors or if the IIFE global name '${IIFE_GLOBAL_NAME}' is correct.
+			 Expected a default export function.`,
 		);
 	}
 
@@ -34,27 +57,50 @@ export function getMDXComponent<Props = Record<string, unknown>>(
 }
 
 /**
- * If your MDX file has named exports, you can get them using this function.
+ * This is a bit more advanced and not typically needed with 'getMDXComponent',
+ * but useful if you need to access named exports from the MDX module.
  * @param code The bundled MDX code (string).
- * @param globals An object of global variables to make available.
- * @returns All exports from the MDX module.
+ * @param globals An object of global variables to make available to the MDX component.
+ * @param name The name of the export to retrieve.
+ * @returns The named export.
  */
-export function getMDXExport<Exports = Record<string, unknown>>(
+export function getMDXExport<T = unknown>(
 	code: string,
 	globals: Record<string, unknown> = {},
-): Exports & { default: AnyComponent } {
-	const scope = { ...globals };
-	const keys = Object.keys(scope);
-	const values = Object.values(scope);
-
-	const fn = new Function(...keys, `return ${code}`);
-	const mdxModule = fn(...values);
-
-	if (!mdxModule) {
-		throw new Error(
-			`MDX bundled code did not produce a module.\nCode: ${code.slice(0, 200)}...`,
-		);
+	name: string,
+): T {
+	const G =
+		typeof globalThis !== "undefined"
+			? globalThis
+			: ((typeof window !== "undefined" ? window : global) as any);
+	const originalGlobals: Record<string, any> = {};
+	for (const key in globals) {
+		if (Object.prototype.hasOwnProperty.call(G, key)) {
+			originalGlobals[key] = G[key];
+		}
+		G[key] = globals[key];
 	}
 
-	return mdxModule as Exports & { default: AnyComponent };
+	const fn = new Function(code);
+	fn();
+
+	const mdxModule = G[IIFE_GLOBAL_NAME];
+
+	// Restore original global properties and cleanup
+	for (const key in globals) {
+		if (originalGlobals[key] !== undefined) {
+			G[key] = originalGlobals[key];
+		} else {
+			delete G[key];
+		}
+	}
+	delete G[IIFE_GLOBAL_NAME];
+
+	if (!mdxModule || typeof mdxModule[name] === "undefined") {
+		throw new Error(
+			`MDX Bundling Error: Export "${name}" not found in bundled code. 
+			 Check for build errors or if the IIFE global name '${IIFE_GLOBAL_NAME}' is correct.`,
+		);
+	}
+	return mdxModule[name] as T;
 }
