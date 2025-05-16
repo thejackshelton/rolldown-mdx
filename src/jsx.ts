@@ -34,12 +34,31 @@ export function getMDXComponent<Props = Record<string, unknown>>(
 		G[key] = globals[key];
 	}
 
-	// Create the function to execute the IIFE code.
+	// Construct the code to be executed.
+	// The original `code` from Rolldown is like "var __MDX_CONTENT__ = (function(){...})();"
+	// We need to change this to "globalThis.__MDX_CONTENT__ = (function(){...})();"
+	// to ensure __MDX_CONTENT__ is set on the actual global object accessible via G.
+	const assignmentIndex = code.indexOf("=");
+	if (assignmentIndex === -1) {
+		// If there's no '=', it might be an expression already, or an invalid format.
+		// For safety, and assuming Rolldown's IIFE output with a 'name' always includes 'var name = ...'
+		throw new Error(
+			`Invalid bundled code format: Expected an assignment like 'var ${IIFE_GLOBAL_NAME} = ...' but '=' not found.`,
+		);
+	}
+	// Extract the expression part of the IIFE (everything after the first '=')
+	const iifeExpression = code.substring(assignmentIndex + 1).trimStart();
+	// Create the execution string that assigns to globalThis
+	const executionCode = `globalThis.${IIFE_GLOBAL_NAME} = ${iifeExpression}`;
+
+	// Create the function to execute the modified code.
 	// The IIFE will attach its exports to G[IIFE_GLOBAL_NAME].
-	const fn = new Function(code);
+	const fn = new Function(executionCode);
 	fn();
 
 	const mdxModule = G[IIFE_GLOBAL_NAME] as Record<string, unknown>;
+	console.log("Retrieved mdxModule:", mdxModule);
+	console.log("Type of mdxModule.default:", typeof mdxModule?.default);
 
 	// Restore original global properties and cleanup
 	for (const key in globals) {
@@ -92,6 +111,15 @@ export function getMDXExport<T = unknown>(
 		}
 		G[key] = globals[key];
 	}
+
+	console.log(
+		"code",
+		`
+		--------------------------------
+		code: ${code}
+		--------------------------------
+		`,
+	);
 
 	const fn = new Function(code);
 	fn();

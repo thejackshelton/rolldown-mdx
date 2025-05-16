@@ -41,11 +41,9 @@ Here's a **neat** demo:
   `.trim();
 
 	const demoTsx = `
-import { component$ } from '@builder.io/qwik';
-
-export const Demo = component$(() => {
+  export const Demo = () => {
   return <div>mdx-bundler with Qwik's runtime!</div>;
-});
+};
   `.trim();
 
 	test("smoke test for qwik", async () => {
@@ -67,19 +65,19 @@ export const Demo = component$(() => {
 
 		const Component = getMDXComponent(result.code, jsxComponentConfig) as any;
 
-		const SpanBold = Qwik.component$(() => {
+		const SpanBold = () => {
 			return Qwik.jsx("span", {
 				class: "strong",
 				children: Qwik.jsx(Qwik.Slot, { name: "" }),
 			});
-		});
+		};
 
 		// Frontmatter dates are not automatically converted to Date objects by default by gray-matter
 		// or our current setup. Original mdx-bundler might have special handling.
 		// For now, we expect string dates or adjust if date parsing is added.
 		expect(result.frontmatter).toEqual({
 			title: "Example Post",
-			published: "2021-02-13", // Dates are strings unless parsed
+			published: new Date(Date.UTC(2021, 1, 13)), // Dates are parsed into Date objects by gray-matter
 			description: "This is some meta-data",
 		});
 
