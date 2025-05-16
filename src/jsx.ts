@@ -16,11 +16,17 @@ export function getMDXComponent<Props = Record<string, unknown>>(
 	globals: Record<string, unknown> = {},
 ): AnyComponent<Props> {
 	// Backup existing global properties that might be overwritten by our globals
-	const G =
-		typeof globalThis !== "undefined"
-			? globalThis
-			: ((typeof window !== "undefined" ? window : global) as any);
-	const originalGlobals: Record<string, any> = {};
+	const G = (
+		typeof globalThis !== "undefined" ? globalThis : undefined
+	) as Record<string, unknown>;
+
+	if (!G) {
+		throw new Error(
+			"Unable to find global object (globalThis). Execution environment might be too old.",
+		);
+	}
+
+	const originalGlobals: Record<string, unknown> = {};
 	for (const key in globals) {
 		if (Object.prototype.hasOwnProperty.call(G, key)) {
 			originalGlobals[key] = G[key];
@@ -33,7 +39,7 @@ export function getMDXComponent<Props = Record<string, unknown>>(
 	const fn = new Function(code);
 	fn();
 
-	const mdxModule = G[IIFE_GLOBAL_NAME];
+	const mdxModule = G[IIFE_GLOBAL_NAME] as Record<string, unknown>;
 
 	// Restore original global properties and cleanup
 	for (const key in globals) {
@@ -60,20 +66,26 @@ export function getMDXComponent<Props = Record<string, unknown>>(
  * This is a bit more advanced and not typically needed with 'getMDXComponent',
  * but useful if you need to access named exports from the MDX module.
  * @param code The bundled MDX code (string).
- * @param globals An object of global variables to make available to the MDX component.
  * @param name The name of the export to retrieve.
+ * @param globals An object of global variables to make available to the MDX component.
  * @returns The named export.
  */
 export function getMDXExport<T = unknown>(
 	code: string,
-	globals: Record<string, unknown> = {},
 	name: string,
+	globals: Record<string, unknown> = {},
 ): T {
-	const G =
-		typeof globalThis !== "undefined"
-			? globalThis
-			: ((typeof window !== "undefined" ? window : global) as any);
-	const originalGlobals: Record<string, any> = {};
+	const G = (
+		typeof globalThis !== "undefined" ? globalThis : undefined
+	) as Record<string, unknown>; // Use globalThis, fallback to undefined with type assertion
+
+	if (!G) {
+		throw new Error(
+			"Unable to find global object (globalThis). Execution environment might be too old.",
+		);
+	}
+
+	const originalGlobals: Record<string, unknown> = {};
 	for (const key in globals) {
 		if (Object.prototype.hasOwnProperty.call(G, key)) {
 			originalGlobals[key] = G[key];
@@ -84,7 +96,7 @@ export function getMDXExport<T = unknown>(
 	const fn = new Function(code);
 	fn();
 
-	const mdxModule = G[IIFE_GLOBAL_NAME];
+	const mdxModule = G[IIFE_GLOBAL_NAME] as Record<string, unknown>;
 
 	// Restore original global properties and cleanup
 	for (const key in globals) {
