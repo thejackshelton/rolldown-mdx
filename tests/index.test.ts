@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, test, expect } from "vitest";
 import * as Qwik from "@builder.io/qwik";
 import { render } from "@noma.to/qwik-testing-library";
@@ -65,10 +66,10 @@ Here's a **neat** demo:
 
 		const Component = getMDXComponent(result.code, jsxComponentConfig) as any;
 
-		const SpanBold = () => {
+		const SpanBold = (props: { children?: any }) => {
 			return Qwik.jsx("span", {
 				class: "strong",
-				children: Qwik.jsx(Qwik.Slot, { name: "" }),
+				children: props.children,
 			});
 		};
 
