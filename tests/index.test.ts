@@ -91,9 +91,7 @@ Here's a **neat** demo:
 		// It might change in Qwik v2.
 		// The exact structure of comments <!--qv X--> can vary.
 		// Using .toContain or regex might be more robust if exact comment content is unstable.
-		const expectedHTML = `<h1>This is the title</h1>
-<p>Here's a <!--qv--><span class="strong"><!--qv q:key q:sref=0 q:s-->neat<!--/qv--></span><!--/qv--> demo:</p>
-<!--qv--><div>mdx-bundler with Qwik's runtime!</div><!--/qv-->`;
+		const expectedHTML = `<h1>This is the title</h1><p>Here's a <span class="strong">neat</span> demo:</p><div>mdx-bundler with Qwik's runtime!</div>`;
 
 		// Normalize HTML for comparison (remove extra whitespace between tags, etc.)
 		const normalizeHTML = (html: string) =>
