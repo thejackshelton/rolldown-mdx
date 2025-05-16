@@ -2,7 +2,7 @@ import { describe, test, expect } from "vitest";
 import * as Qwik from "@builder.io/qwik";
 import { render } from "@noma.to/qwik-testing-library";
 import { bundleMDX, type MdxJsxConfig } from "../src/index";
-import { getMDXComponent } from "../src/client/jsx";
+import { getMDXComponent } from "../src/jsx";
 
 describe("bundleMDX with Qwik", () => {
 	const jsxBundlerConfig: MdxJsxConfig = {
@@ -65,7 +65,7 @@ export const Demo = component$(() => {
 		expect(result.errors).toEqual([]);
 		expect(result.warnings).toEqual([]); // Or handle expected warnings if any
 
-		const Component = getMDXComponent(result.code, jsxComponentConfig);
+		const Component = getMDXComponent(result.code, jsxComponentConfig) as any;
 
 		const SpanBold = Qwik.component$(() => {
 			return Qwik.jsx("span", {

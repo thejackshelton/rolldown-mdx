@@ -194,12 +194,13 @@ export async function bundleMDX({
 	let mdxPluginOpts: MdxPluginOptions = {
 		remarkPlugins: [remarkFrontmatter, remarkMdxFrontmatter],
 		rehypePlugins: [],
-		jsx: false, // Explicitly set to false to get function calls from MDX plugin
-		// Adjust jsxImportSource for MDX plugin: it appends '/jsx-runtime'.
-		// So, provide the base package path (jsxLib.package) here.
-		jsxImportSource: jsxConfig?.jsxLib?.package, // e.g., '@builder.io/qwik'
-		jsxRuntime: "automatic", // MDX plugin will use automatic runtime logic
-		providerImportSource: jsxConfig?.jsxLib?.package, // For MDXProvider context
+		jsx: false, // MDX plugin should output JS function calls
+		jsxRuntime: "automatic", // MDX v3 prefers automatic runtime
+		// MDX plugin will append '/jsx-runtime' to this value.
+		// So, provide the base package path for Qwik's actual JSX runtime.
+		jsxImportSource: jsxConfig?.jsxLib?.package, // Results in import from '@builder.io/qwik/jsx-runtime'
+		// pragma & pragmaFrag are deprecated in MDX v3 and were causing issues.
+		// providerImportSource: jsxConfig?.jsxLib?.package, // If MDXProvider is used
 	};
 
 	if (mdxOptionsFn) {
@@ -211,13 +212,13 @@ export async function bundleMDX({
 		input: entryPointId, // Input is the virtual MDX entry
 		plugins: [inMemoryPlugin, mdx(mdxPluginOpts)],
 		external: Object.keys(globals),
-		jsx: jsxConfig?.jsxRuntime?.package
+		// Rolldown handles JSX in .tsx files (like demo.tsx) using Qwik's automatic runtime
+		jsx: jsxConfig?.jsxLib?.package // If jsxLib is configured, assume we want Qwik JSX processing
 			? {
 					mode: "automatic",
-					// If Rolldown's JSX transform also appends '/jsx-runtime' to jsxImportSource,
-					// then provide the base package path here as well.
-					jsxImportSource: jsxConfig.jsxLib?.package, // e.g., '@builder.io/qwik'
-					importSource: jsxConfig.jsxLib?.package, // For classic fallback, e.g., '@builder.io/qwik'
+					// Rolldown's transform (like MDX plugin) will append '/jsx-runtime' to this.
+					jsxImportSource: jsxConfig.jsxLib.package, // e.g., '@builder.io/qwik' -> imports from '@builder.io/qwik/jsx-runtime'
+					// factory/fragment are not typically needed for automatic mode if jsxImportSource is correctly resolved.
 				}
 			: undefined,
 	};
@@ -257,10 +258,7 @@ export async function bundleMDX({
 
 		if (output.length > 0 && output[0].type === "chunk") {
 			bundledCode = output[0].code;
-			console.log(
-				"[bundleMDX] Bundled code (first 300 chars):",
-				bundledCode.substring(0, 300),
-			);
+			console.log("[bundleMDX] Full Bundled code:", bundledCode);
 			// if (output[0].map) { /* handle sourcemap if needed */ }
 		} else {
 			console.error(
