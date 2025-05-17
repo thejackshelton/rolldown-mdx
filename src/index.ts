@@ -5,7 +5,7 @@ import remarkFrontmatter from "remark-frontmatter";
 import remarkMdxFrontmatter from "remark-mdx-frontmatter";
 import { VFile } from "vfile";
 import matter from "gray-matter";
-import { resolve, dirname, extname, relative as relativePath } from "pathe";
+import { resolve, dirname, extname } from "pathe";
 import { qwikRollup } from "@builder.io/qwik/optimizer";
 
 export interface MdxJsxConfig {
@@ -122,13 +122,12 @@ export async function bundleMDX({
 		...restOfMatter,
 	};
 
-	// Helper function to find a path by trying extensions
 	function findPathWithExt(
-		basePath: string, // e.g., /path/to/file (without extension)
-		extensionsToTry: string[],
+		basePath: string,
+		extensions: string[],
 		filesMap: Record<string, string>,
 	): string | null {
-		for (const ext of extensionsToTry) {
+		for (const ext of extensions) {
 			const pathWithExt = basePath + ext;
 			const isPathWithExtMatch = Object.prototype.hasOwnProperty.call(
 				filesMap,
@@ -204,24 +203,34 @@ export async function bundleMDX({
 			return null;
 		},
 		load(id: string) {
-			console.log(`[inMemoryPlugin.load] Attempting to load: '${id}'`);
-			if (id === entryPointId) {
+			console.log(
+				`[inMemoryPlugin.load] Attempting to load module with ID: '${id}'`,
+			);
+
+			const isEntryPoint = id === entryPointId;
+			if (isEntryPoint) {
 				console.log(
 					`[inMemoryPlugin.load] Loading content for special entry point '${id}' (first 100 chars):`,
 					mdxBody.substring(0, 100),
 				);
 				return mdxBody;
 			}
-			// All other IDs should be absolute paths resolved by resolveId
-			if (Object.prototype.hasOwnProperty.call(processedFiles, id)) {
+
+			const isInMemoryFile = Object.prototype.hasOwnProperty.call(
+				processedFiles,
+				id,
+			);
+
+			if (isInMemoryFile) {
 				console.log(
-					`[inMemoryPlugin.load] Loading content for '${id}' from processedFiles (first 100 chars):`,
+					`[inMemoryPlugin.load] Loading content for in-memory file '${id}' from processedFiles (first 100 chars):`,
 					processedFiles[id].substring(0, 100),
 				);
 				return processedFiles[id];
 			}
+
 			console.log(
-				`[inMemoryPlugin.load] Failed to load '${id}' from processedFiles or as entry point.`,
+				`[inMemoryPlugin.load] Module ID '${id}' not found in processedFiles or as entry point. The rolldown-mdx in-memory plugin will not load it.`,
 			);
 			return null;
 		},
