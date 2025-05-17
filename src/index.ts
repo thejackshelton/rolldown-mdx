@@ -33,6 +33,7 @@ export interface BundleMDXOptions {
 	) => MdxPluginOptions;
 	globals?: Record<string, string>;
 	jsxConfig?: MdxJsxConfig;
+	resolveExtensions?: string[];
 }
 
 export interface BundleMDXResult {
@@ -50,6 +51,7 @@ export async function bundleMDX({
 	mdxOptions: mdxOptionsFn,
 	globals = {},
 	jsxConfig = {},
+	resolveExtensions = [".tsx", ".ts", ".jsx", ".js", ".mdx", ".json"],
 }: BundleMDXOptions): Promise<BundleMDXResult> {
 	console.log("[bundleMDX] Initial options:", {
 		source: typeof source === "string" ? "string" : "VFile",
@@ -58,7 +60,19 @@ export async function bundleMDX({
 		hasMdxOptionsFn: !!mdxOptionsFn,
 		globals,
 		jsxConfig,
+		resolveExtensions,
 	});
+
+	const processedFiles: Record<string, string> = {};
+	for (const [key, value] of Object.entries(files)) {
+		const absoluteKey = resolve(cwd, key);
+		processedFiles[absoluteKey] = value;
+	}
+	console.log(
+		"[bundleMDX] Processed files map (keys):",
+		Object.keys(processedFiles),
+	);
+
 	if (typeof source === "string") {
 		console.log(
 			"[bundleMDX] Source string (first 100 chars):",
@@ -108,81 +122,107 @@ export async function bundleMDX({
 		...restOfMatter,
 	};
 
+	// Helper function to find a path by trying extensions
+	function findPathWithExt(
+		basePath: string, // e.g., /path/to/file (without extension)
+		extensionsToTry: string[],
+		filesMap: Record<string, string>,
+	): string | null {
+		for (const ext of extensionsToTry) {
+			const pathWithExt = basePath + ext;
+			const isPathWithExtMatch = Object.prototype.hasOwnProperty.call(
+				filesMap,
+				pathWithExt,
+			);
+			if (isPathWithExtMatch) {
+				return pathWithExt;
+			}
+		}
+		return null;
+	}
+
 	const inMemoryPlugin = {
 		name: "in-memory-loader",
 		resolveId(id: string, importer?: string) {
 			console.log(
 				`[inMemoryPlugin.resolveId] Attempting to resolve: '${id}' from importer: '${importer}'`,
 			);
+
 			if (id === entryPointId || id === `./${entryPointId}`) {
 				console.log(
-					`[inMemoryPlugin.resolveId] Resolved '${id}' to entry point '${entryPointId}'`,
+					`[inMemoryPlugin.resolveId] Resolved '${id}' to special entry point '${entryPointId}'`,
 				);
 				return entryPointId;
 			}
-			// Resolve other files from the 'files' map
+
+			let baseDir: string;
 			if (importer) {
-				const baseDir =
-					importer === entryPointId ? dirname(vfile.path) : dirname(importer);
-				let resolvedPath = resolve(baseDir, id);
-
-				// Attempt to match with extensions if not explicitly provided
-				const extensions = [".tsx", ".ts", ".jsx", ".js", ".mdx", ".json"];
-				if (!extname(resolvedPath)) {
-					for (const ext of extensions) {
-						if (files[`./${relativePath(cwd, resolvedPath + ext)}`]) {
-							resolvedPath = resolvedPath + ext;
-							break;
-						}
-						if (files[resolvedPath + ext]) {
-							// for absolute-like paths in files keys
-							resolvedPath = resolvedPath + ext;
-							break;
-						}
-					}
+				if (importer === entryPointId) {
+					baseDir = dirname(vfile.path);
+				} else {
+					baseDir = dirname(importer);
 				}
-
-				const relativeKey = `./${relativePath(cwd, resolvedPath)}`;
-				if (files[relativeKey]) {
-					console.log(
-						`[inMemoryPlugin.resolveId] Resolved '${id}' to relativeKey '${relativeKey}' from files map`,
-					);
-					return relativeKey;
-				}
-				if (files[resolvedPath]) {
-					console.log(
-						`[inMemoryPlugin.resolveId] Resolved '${id}' to resolvedPath '${resolvedPath}' from files map (absolute-like)`,
-					);
-					return resolvedPath;
-				}
+			} else {
+				baseDir = cwd;
 			}
-			// Fallback for top-level entries in files map (e.g. node_modules)
-			if (files[id]) {
+
+			const resolvedImportPath = resolve(baseDir, id);
+			console.log(
+				`[inMemoryPlugin.resolveId] Resolved import path for '${id}': ${resolvedImportPath}`,
+			);
+
+			const isDirectKeyMatch = Object.prototype.hasOwnProperty.call(
+				processedFiles,
+				resolvedImportPath,
+			);
+			if (isDirectKeyMatch) {
 				console.log(
-					`[inMemoryPlugin.resolveId] Resolved '${id}' directly from files map (globals/node_modules)`,
+					`[inMemoryPlugin.resolveId] Resolved '${id}' to '${resolvedImportPath}' from processedFiles (direct key match).`,
 				);
-				return id;
+				return resolvedImportPath;
 			}
-			console.log(`[inMemoryPlugin.resolveId] Failed to resolve '${id}'`);
+
+			const importPathLacksExtension = !extname(resolvedImportPath);
+
+			if (importPathLacksExtension) {
+				const resolvedFullPath = findPathWithExt(
+					resolvedImportPath,
+					resolveExtensions,
+					processedFiles,
+				);
+				if (resolvedFullPath) {
+					console.log(
+						`[inMemoryPlugin.resolveId] Resolved '${id}' to '${resolvedFullPath}' from processedFiles (added extension).`,
+					);
+					return resolvedFullPath;
+				}
+			}
+
+			console.log(
+				`[inMemoryPlugin.resolveId] Failed to resolve '${id}' (resolvedImportPath: ${resolvedImportPath}) in processedFiles. Returning null.`,
+			);
 			return null;
 		},
 		load(id: string) {
 			console.log(`[inMemoryPlugin.load] Attempting to load: '${id}'`);
 			if (id === entryPointId) {
 				console.log(
-					`[inMemoryPlugin.load] Loading content for entry point '${id}' (first 100 chars):`,
+					`[inMemoryPlugin.load] Loading content for special entry point '${id}' (first 100 chars):`,
 					mdxBody.substring(0, 100),
 				);
 				return mdxBody;
 			}
-			if (files[id]) {
+			// All other IDs should be absolute paths resolved by resolveId
+			if (Object.prototype.hasOwnProperty.call(processedFiles, id)) {
 				console.log(
-					`[inMemoryPlugin.load] Loading content for '${id}' from files map (first 100 chars):`,
-					files[id].substring(0, 100),
+					`[inMemoryPlugin.load] Loading content for '${id}' from processedFiles (first 100 chars):`,
+					processedFiles[id].substring(0, 100),
 				);
-				return files[id];
+				return processedFiles[id];
 			}
-			console.log(`[inMemoryPlugin.load] Failed to load '${id}'`);
+			console.log(
+				`[inMemoryPlugin.load] Failed to load '${id}' from processedFiles or as entry point.`,
+			);
 			return null;
 		},
 	};
