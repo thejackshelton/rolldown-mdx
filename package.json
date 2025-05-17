@@ -15,7 +15,9 @@
 	},
 	"author": "Jack Shelton",
 	"funding": "https://github.com/sponsors/thejackshelton",
-	"files": ["dist"],
+	"files": [
+		"dist"
+	],
 	"main": "./dist/index.js",
 	"module": "./dist/index.js",
 	"types": "./dist/index.d.ts",
@@ -54,6 +56,7 @@
 		"remark-frontmatter": "^5.0.0",
 		"remark-mdx-frontmatter": "^5.1.0",
 		"rolldown": "1.0.0-beta.8",
+		"sucrase": "^3.35.0",
 		"vfile": "^6.0.3"
 	}
 }

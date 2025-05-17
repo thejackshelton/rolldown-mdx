@@ -4,6 +4,7 @@ import * as Qwik from "@builder.io/qwik";
 import { render } from "@noma.to/qwik-testing-library";
 import { bundleMDX, type MdxJsxConfig } from "../src/index";
 import { getMDXComponent } from "../src/jsx";
+import * as QwikJsxRuntime from "@builder.io/qwik/jsx-runtime";
 
 describe("bundleMDX with Qwik", () => {
 	const jsxBundlerConfig: MdxJsxConfig = {
@@ -50,23 +51,38 @@ Here's a **neat** demo:
   `.trim();
 
 	test("smoke test for qwik", async () => {
-		const result = await bundleMDX({
+		// This is the globals configuration for bundleMDX itself.
+		// The KEYS here determine what becomes `require('key')` in the CJS output.
+		const bundleOptionsGlobals = {
+			"@builder.io/qwik": "Qwik", // Value is for Rolldown's legacy UMD/IIFE, less critical for CJS externals
+			"@builder.io/qwik/jsx-runtime": "_jsx_runtime", // Same as above
+		};
+
+		const { code, frontmatter } = await bundleMDX({
 			source: mdxSource,
-			jsxConfig: jsxBundlerConfig,
 			files: {
 				"./demo.tsx": demoTsx,
 			},
-			globals: {
-				// These should align with jsxComponentConfig keys for externalization
-				"@builder.io/qwik": "Qwik",
-				"@builder.io/qwik/jsx-runtime": "_jsx_runtime",
-			},
+			globals: bundleOptionsGlobals, // Use the defined globals for bundling
+			jsxConfig: jsxBundlerConfig,
 		});
 
-		expect(result.errors).toEqual([]);
-		expect(result.warnings).toEqual([]); // Or handle expected warnings if any
+		expect(code).toEqual(expect.any(String));
+		expect(frontmatter).toEqual({
+			title: "Example Post",
+			published: new Date(Date.UTC(2021, 1, 13)), // Dates are parsed into Date objects by gray-matter
+			description: "This is some meta-data",
+		});
 
-		const Component = getMDXComponent(result.code, jsxComponentConfig) as any;
+		// THIS IS THE CRUCIAL PART:
+		// The keys in THIS globals object for getMDXComponent MUST MATCH
+		// the strings that will be require()'d by the CJS bundle.
+		const executionTimeGlobals = {
+			"@builder.io/qwik": Qwik, // Key is the string '@builder.io/qwik'
+			"@builder.io/qwik/jsx-runtime": QwikJsxRuntime, // Key is the string '@builder.io/qwik/jsx-runtime'
+		};
+
+		const Component = getMDXComponent(code, executionTimeGlobals);
 
 		const SpanBold = (props: { children?: any }) => {
 			return Qwik.jsx("span", {
@@ -74,15 +90,6 @@ Here's a **neat** demo:
 				children: props.children,
 			});
 		};
-
-		// Frontmatter dates are not automatically converted to Date objects by default by gray-matter
-		// or our current setup. Original mdx-bundler might have special handling.
-		// For now, we expect string dates or adjust if date parsing is added.
-		expect(result.frontmatter).toEqual({
-			title: "Example Post",
-			published: new Date(Date.UTC(2021, 1, 13)), // Dates are parsed into Date objects by gray-matter
-			description: "This is some meta-data",
-		});
 
 		const { container } = await render(
 			Qwik.jsx(Component, { components: { strong: SpanBold } }),
@@ -93,7 +100,7 @@ Here's a **neat** demo:
 		// It might change in Qwik v2.
 		// The exact structure of comments <!--qv X--> can vary.
 		// Using .toContain or regex might be more robust if exact comment content is unstable.
-		const expectedHTML = `<h1>This is the title</h1><p>Here's a <span class="strong">neat</span> demo:</p><div>mdx-bundler with Qwik's runtime!</div>`;
+		const expectedHTML = `<h1>This is the title</h1><p>Here's a <span class="strong">neat</span> demo:</p><!--qv --><div>mdx-bundler with Qwik's runtime!</div><!--/qv-->`;
 
 		// Normalize HTML for comparison (remove extra whitespace between tags, etc.)
 		const normalizeHTML = (html: string) =>

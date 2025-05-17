@@ -1,93 +1,113 @@
-// Define a generic type for a component function if JSX namespace is not globally available.
-// Users of specific frameworks (React, Qwik, Solid) will have their own JSX.Element types.
-// This client aims to be framework-agnostic in its type signature here.
-type AnyComponent<Props = Record<string, unknown>> = (props: Props) => unknown; // More generic than JSX.Element
-
-const IIFE_GLOBAL_NAME = "__MDX_CONTENT__";
+// Define a generic type for a component function
+type AnyComponent<Props = Record<string, unknown>> = (props: Props) => unknown;
 
 /**
- * A simple factory to create a component from the bundled MDX code.
- * @param code The bundled MDX code (string), expected to be an IIFE.
- * @param globals An object of global variables to make available to the MDX component.
+ * Executes the bundled CommonJS MDX code string.
+ * @param code The bundled MDX code (CommonJS string).
+ * @param executionGlobals An object mapping external package names to their actual library objects.
+ *                         These will be resolved by the `require` shim.
+ * @returns The `module.exports` from the executed code.
+ */
+function executeCJS(
+	code: string,
+	executionGlobals: Record<string, unknown> = {},
+): unknown {
+	const exports = {};
+	const module = { exports };
+
+	const requireShim = (id: string): unknown => {
+		if (executionGlobals[id]) {
+			return executionGlobals[id];
+		}
+		throw new Error(
+			`[rolldown-mdx] Cannot find module '${id}' during CJS execution. Ensure it's in 'globals' passed to getMDXComponent/getMDXExport. Available globals: ${Object.keys(executionGlobals).join(", ") || "(none)"}`,
+		);
+	};
+
+	const argNames = ["exports", "require", "module"];
+	const argValues = [exports, requireShim, module];
+
+	console.log(
+		"[executeCJS] Attempting to execute CJS code (first 500 chars):",
+		code.substring(0, 500) + (code.length > 500 ? "..." : ""),
+	);
+
+	try {
+		const fn = new Function(...argNames, code);
+		fn(...argValues);
+	} catch (error) {
+		console.error("[executeCJS] Error executing CJS bundle:", error);
+		console.error(
+			"[executeCJS] Bundle code (problematic section might be earlier):",
+		);
+		const errorLines =
+			error instanceof Error && error.stack ? error.stack.split("\n") : [];
+		const lineNumMatch = errorLines.find((line) =>
+			line.includes("<anonymous>:"),
+		);
+		let problemLine = -1;
+		if (lineNumMatch) {
+			const parts = lineNumMatch.split(":");
+			// new Function() code is often wrapped, line numbers in stack are relative to the function body.
+			// The actual line number within the 'code' string might be the second to last part.
+			if (parts.length >= 3)
+				problemLine = Number.parseInt(parts[parts.length - 2], 10) - 1; // -1 because new Function wraps code.
+		}
+
+		if (problemLine !== -1 && problemLine < code.split("\n").length) {
+			console.error("--- Potentially problematic line snippet ---");
+			const codeLines = code.split("\n");
+			const start = Math.max(0, problemLine - 2);
+			const end = Math.min(codeLines.length, problemLine + 3);
+			console.error(codeLines.slice(start, end).join("\n"));
+			console.error("-----------------------------------------");
+		} else {
+			console.error(
+				"(Could not determine problematic line from stack trace or stack trace unavailable)",
+			);
+			console.error(
+				"Full CJS Code (first 1000 chars):",
+				code.substring(0, 1000),
+			);
+		}
+		throw error;
+	}
+
+	return module.exports;
+}
+
+/**
+ * Creates a component from the bundled MDX code (CommonJS string).
+ * @param code The bundled MDX code (CommonJS string).
+ * @param globals An object mapping external package names to their actual library objects.
  * @returns The MDX component.
  */
 export function getMDXComponent<Props = Record<string, unknown>>(
 	code: string,
 	globals: Record<string, unknown> = {},
 ): AnyComponent<Props> {
-	// Backup existing global properties that might be overwritten by our globals
-	const G = (
-		typeof globalThis !== "undefined" ? globalThis : undefined
-	) as Record<string, unknown>;
+	const mdxModule = executeCJS(code, globals) as {
+		default?: AnyComponent<Props>;
+		[key: string]: unknown;
+	};
 
-	if (!G) {
+	if (typeof mdxModule.default !== "function") {
+		console.error(
+			"[getMDXComponent] MDX module missing default export function. Exports:",
+			mdxModule,
+		);
 		throw new Error(
-			"Unable to find global object (globalThis). Execution environment might be too old.",
+			"MDX Bundling Error: Module did not have a default export function.",
 		);
 	}
-
-	const originalGlobals: Record<string, unknown> = {};
-	for (const key in globals) {
-		if (Object.prototype.hasOwnProperty.call(G, key)) {
-			originalGlobals[key] = G[key];
-		}
-		G[key] = globals[key];
-	}
-
-	// Construct the code to be executed.
-	// The original `code` from Rolldown is like "var __MDX_CONTENT__ = (function(){...})();"
-	// We need to change this to "globalThis.__MDX_CONTENT__ = (function(){...})();"
-	// to ensure __MDX_CONTENT__ is set on the actual global object accessible via G.
-	// const assignmentIndex = code.indexOf("=");
-	// if (assignmentIndex === -1) {
-	// 	// If there's no '=', it might be an expression already, or an invalid format.
-	// 	// For safety, and assuming Rolldown's IIFE output with a 'name' always includes 'var name = ...'
-	// 	throw new Error(
-	// 		`Invalid bundled code format: Expected an assignment like 'var ${IIFE_GLOBAL_NAME} = ...' but '=' not found.`,
-	// 	);
-	// }
-	// // Extract the expression part of the IIFE (everything after the first '=')
-	// const iifeExpression = code.substring(assignmentIndex + 1).trimStart();
-	// // Create the execution string that assigns to globalThis
-	// const executionCode = `globalThis.${IIFE_GLOBAL_NAME} = ${iifeExpression}`;
-
-	// Create the function to execute the UMD code.
-	// The UMD wrapper should handle exposing its exports to G[IIFE_GLOBAL_NAME] when no module system is found.
-	console.log("code", code);
-	const fn = new Function(code);
-	fn();
-
-	const mdxModule = G[IIFE_GLOBAL_NAME] as Record<string, unknown>;
-	console.log("Retrieved mdxModule:", mdxModule);
-	console.log("Type of mdxModule.default:", typeof mdxModule?.default);
-
-	// Restore original global properties and cleanup
-	for (const key in globals) {
-		if (originalGlobals[key] !== undefined) {
-			G[key] = originalGlobals[key];
-		} else {
-			delete G[key];
-		}
-	}
-	delete G[IIFE_GLOBAL_NAME];
-
-	if (!mdxModule || typeof mdxModule.default !== "function") {
-		throw new Error(
-			`MDX Bundling Error: Bundled code did not produce the expected component. 
-			 Check for build errors or if the IIFE global name '${IIFE_GLOBAL_NAME}' is correct.
-			 Expected a default export function.`,
-		);
-	}
-
-	return mdxModule.default as AnyComponent<Props>;
+	return mdxModule.default;
 }
 
 /**
- * This is a bit more advanced and not typically needed with 'getMDXComponent',
- * but useful if you need to access named exports from the MDX module.
- * @param code The bundled MDX code (string).
+ * Retrieves a named export from the bundled MDX code (CommonJS string).
+ * @param code The bundled MDX code (CommonJS string).
  * @param name The name of the export to retrieve.
- * @param globals An object of global variables to make available to the MDX component.
+ * @param globals An object mapping external package names to their actual library objects.
  * @returns The named export.
  */
 export function getMDXExport<T = unknown>(
@@ -95,52 +115,15 @@ export function getMDXExport<T = unknown>(
 	name: string,
 	globals: Record<string, unknown> = {},
 ): T {
-	const G = (
-		typeof globalThis !== "undefined" ? globalThis : undefined
-	) as Record<string, unknown>; // Use globalThis, fallback to undefined with type assertion
+	const mdxModule = executeCJS(code, globals) as Record<string, unknown>; // Corrected: executeCJS
 
-	if (!G) {
-		throw new Error(
-			"Unable to find global object (globalThis). Execution environment might be too old.",
+	if (typeof mdxModule[name] === "undefined") {
+		console.error(
+			`[getMDXExport] Export "${name}" not found. Exports:`,
+			mdxModule,
 		);
-	}
-
-	const originalGlobals: Record<string, unknown> = {};
-	for (const key in globals) {
-		if (Object.prototype.hasOwnProperty.call(G, key)) {
-			originalGlobals[key] = G[key];
-		}
-		G[key] = globals[key];
-	}
-
-	console.log(
-		"code",
-		`
-		--------------------------------
-		code: ${code}
-		--------------------------------
-		`,
-	);
-
-	const fn = new Function(code);
-	fn();
-
-	const mdxModule = G[IIFE_GLOBAL_NAME] as Record<string, unknown>;
-
-	// Restore original global properties and cleanup
-	for (const key in globals) {
-		if (originalGlobals[key] !== undefined) {
-			G[key] = originalGlobals[key];
-		} else {
-			delete G[key];
-		}
-	}
-	delete G[IIFE_GLOBAL_NAME];
-
-	if (!mdxModule || typeof mdxModule[name] === "undefined") {
 		throw new Error(
-			`MDX Bundling Error: Export "${name}" not found in bundled code. 
-			 Check for build errors or if the IIFE global name '${IIFE_GLOBAL_NAME}' is correct.`,
+			`MDX Bundling Error: Export "${name}" not found in module.`,
 		);
 	}
 	return mdxModule[name] as T;
