@@ -34,6 +34,7 @@ export interface BundleMDXOptions {
 	globals?: Record<string, string>;
 	jsxConfig?: MdxJsxConfig;
 	resolveExtensions?: string[];
+	debug?: boolean;
 }
 
 export interface BundleMDXResult {
@@ -52,8 +53,15 @@ export async function bundleMDX({
 	globals = {},
 	jsxConfig = {},
 	resolveExtensions = [".tsx", ".ts", ".jsx", ".js", ".mdx", ".json"],
+	debug: isDebugMode = false,
 }: BundleMDXOptions): Promise<BundleMDXResult> {
-	console.log("[bundleMDX] Initial options:", {
+	const debug = (...args: unknown[]) => {
+		if (isDebugMode) {
+			console.log(...args);
+		}
+	};
+
+	debug("[bundleMDX] Initial options:", {
 		source: typeof source === "string" ? "string" : "VFile",
 		files: Object.keys(files),
 		cwd,
@@ -61,6 +69,7 @@ export async function bundleMDX({
 		globals,
 		jsxConfig,
 		resolveExtensions,
+		debug,
 	});
 
 	const processedFiles: Record<string, string> = {};
@@ -68,19 +77,16 @@ export async function bundleMDX({
 		const absoluteKey = resolve(cwd, key);
 		processedFiles[absoluteKey] = value;
 	}
-	console.log(
-		"[bundleMDX] Processed files map (keys):",
-		Object.keys(processedFiles),
-	);
+	debug("[bundleMDX] Processed files map (keys):", Object.keys(processedFiles));
 
 	if (typeof source === "string") {
-		console.log(
+		debug(
 			"[bundleMDX] Source string (first 100 chars):",
 			source.substring(0, 100),
 		);
 	} else {
-		console.log("[bundleMDX] Source VFile path:", source.path);
-		console.log(
+		debug("[bundleMDX] Source VFile path:", source.path);
+		debug(
 			"[bundleMDX] Source VFile value (first 100 chars):",
 			String(source.value).substring(0, 100),
 		);
@@ -108,8 +114,8 @@ export async function bundleMDX({
 	} = matter(String(vfile.value));
 
 	const frontmatter = frontmatterData || {};
-	console.log("[bundleMDX] Extracted frontmatter:", frontmatter);
-	console.log(
+	debug("[bundleMDX] Extracted frontmatter:", frontmatter);
+	debug(
 		"[bundleMDX] MDX content after frontmatter (first 100 chars):",
 		mdxBody.substring(0, 100),
 	);
@@ -143,12 +149,12 @@ export async function bundleMDX({
 	const inMemoryPlugin = {
 		name: "in-memory-loader",
 		resolveId(id: string, importer?: string) {
-			console.log(
+			debug(
 				`[inMemoryPlugin.resolveId] Attempting to resolve: '${id}' from importer: '${importer}'`,
 			);
 
 			if (id === entryPointId || id === `./${entryPointId}`) {
-				console.log(
+				debug(
 					`[inMemoryPlugin.resolveId] Resolved '${id}' to special entry point '${entryPointId}'`,
 				);
 				return entryPointId;
@@ -166,7 +172,7 @@ export async function bundleMDX({
 			}
 
 			const resolvedImportPath = resolve(baseDir, id);
-			console.log(
+			debug(
 				`[inMemoryPlugin.resolveId] Resolved import path for '${id}': ${resolvedImportPath}`,
 			);
 
@@ -175,7 +181,7 @@ export async function bundleMDX({
 				resolvedImportPath,
 			);
 			if (isDirectKeyMatch) {
-				console.log(
+				debug(
 					`[inMemoryPlugin.resolveId] Resolved '${id}' to '${resolvedImportPath}' from processedFiles (direct key match).`,
 				);
 				return resolvedImportPath;
@@ -190,26 +196,24 @@ export async function bundleMDX({
 					processedFiles,
 				);
 				if (resolvedFullPath) {
-					console.log(
+					debug(
 						`[inMemoryPlugin.resolveId] Resolved '${id}' to '${resolvedFullPath}' from processedFiles (added extension).`,
 					);
 					return resolvedFullPath;
 				}
 			}
 
-			console.log(
+			debug(
 				`[inMemoryPlugin.resolveId] Failed to resolve '${id}' (resolvedImportPath: ${resolvedImportPath}) in processedFiles. Returning null.`,
 			);
 			return null;
 		},
 		load(id: string) {
-			console.log(
-				`[inMemoryPlugin.load] Attempting to load module with ID: '${id}'`,
-			);
+			debug(`[inMemoryPlugin.load] Attempting to load module with ID: '${id}'`);
 
 			const isEntryPoint = id === entryPointId;
 			if (isEntryPoint) {
-				console.log(
+				debug(
 					`[inMemoryPlugin.load] Loading content for special entry point '${id}' (first 100 chars):`,
 					mdxBody.substring(0, 100),
 				);
@@ -222,14 +226,14 @@ export async function bundleMDX({
 			);
 
 			if (isInMemoryFile) {
-				console.log(
+				debug(
 					`[inMemoryPlugin.load] Loading content for in-memory file '${id}' from processedFiles (first 100 chars):`,
 					processedFiles[id].substring(0, 100),
 				);
 				return processedFiles[id];
 			}
 
-			console.log(
+			debug(
 				`[inMemoryPlugin.load] Module ID '${id}' not found in processedFiles or as entry point. The rolldown-mdx in-memory plugin will not load it.`,
 			);
 			return null;
@@ -247,7 +251,7 @@ export async function bundleMDX({
 	if (mdxOptionsFn) {
 		mdxOpts = mdxOptionsFn(mdxOpts, frontmatter);
 	}
-	console.log("[bundleMDX] Final MDX Plugin Options:", mdxOpts);
+	debug("[bundleMDX] Final MDX Plugin Options:", mdxOpts);
 
 	const jsxOpts: InputOptions["jsx"] = {
 		mode: "automatic",
@@ -266,7 +270,7 @@ export async function bundleMDX({
 		external: Object.keys(globals),
 		jsx: jsxConfig?.jsxLib?.package ? jsxOpts : undefined,
 	};
-	console.log(
+	debug(
 		"[bundleMDX] Rolldown Input Options:",
 		JSON.stringify(inputOpts, null, 2),
 	);
@@ -279,30 +283,30 @@ export async function bundleMDX({
 		sourcemap: false,
 		inlineDynamicImports: true,
 	};
-	console.log("[bundleMDX] Rolldown Output Options:", outputOpts);
+	debug("[bundleMDX] Rolldown Output Options:", outputOpts);
 
 	let bundledCode = "";
 	const errors: Error[] = [];
 	const warnings: Error[] = [];
 
 	try {
-		console.log("[bundleMDX] Calling rolldown(inputOpts)...");
+		debug("[bundleMDX] Calling rolldown(inputOpts)...");
 		const bundle = await rolldown(inputOpts);
-		console.log(
+		debug(
 			"[bundleMDX] Rolldown build successful. Bundle object (keys):",
 			Object.keys(bundle),
 		);
 
-		console.log("[bundleMDX] Calling bundle.write(outputOpts)...");
+		debug("[bundleMDX] Calling bundle.write(outputOpts)...");
 		const { output } = await bundle.write(outputOpts);
-		console.log(
+		debug(
 			"[bundleMDX] Rolldown write successful. Output (length):",
 			output.length,
 		);
 
 		if (output.length > 0 && output[0].type === "chunk") {
 			bundledCode = output[0].code;
-			console.log("[bundleMDX] Full Bundled code:", bundledCode);
+			debug("[bundleMDX] Full Bundled code:", bundledCode);
 		} else {
 			console.error(
 				"[bundleMDX] No chunk generated by Rolldown or unexpected output type.",
@@ -327,7 +331,7 @@ export async function bundleMDX({
 		errors,
 		warnings,
 	};
-	console.log("[bundleMDX] Returning result:", {
+	debug("[bundleMDX] Returning result:", {
 		codeLength: result.code.length,
 		frontmatter: result.frontmatter,
 		errors: result.errors,
