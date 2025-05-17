@@ -17,12 +17,11 @@ describe("bundleMDX with Qwik", () => {
 		},
 	};
 
-	// This is the config that getMDXComponent will use for its execution scope
 	const jsxComponentConfig = {
 		Qwik,
 		_jsx_runtime: {
 			jsx: Qwik.jsx,
-			jsxs: Qwik.jsx, // Qwik's jsx function handles both from v0.17+
+			jsxs: Qwik.jsx,
 			Fragment: Qwik.Fragment,
 		},
 	};
@@ -42,8 +41,8 @@ Here's a **neat** demo:
   `.trim();
 
 	const demoTsx = `
-
   import { component$ } from '@builder.io/qwik';
+
   export const Demo = component$(() => {
   return <div>mdx-bundler with Qwik's runtime!</div>;
 });
@@ -57,14 +56,13 @@ Here's a **neat** demo:
 				"./demo.tsx": demoTsx,
 			},
 			globals: {
-				// These should align with jsxComponentConfig keys for externalization
 				"@builder.io/qwik": "Qwik",
 				"@builder.io/qwik/jsx-runtime": "_jsx_runtime",
 			},
 		});
 
 		expect(result.errors).toEqual([]);
-		expect(result.warnings).toEqual([]); // Or handle expected warnings if any
+		expect(result.warnings).toEqual([]);
 
 		const Component = getMDXComponent(result.code, jsxComponentConfig) as any;
 
@@ -75,12 +73,9 @@ Here's a **neat** demo:
 			});
 		};
 
-		// Frontmatter dates are not automatically converted to Date objects by default by gray-matter
-		// or our current setup. Original mdx-bundler might have special handling.
-		// For now, we expect string dates or adjust if date parsing is added.
 		expect(result.frontmatter).toEqual({
 			title: "Example Post",
-			published: new Date(Date.UTC(2021, 1, 13)), // Dates are parsed into Date objects by gray-matter
+			published: new Date(Date.UTC(2021, 1, 13)),
 			description: "This is some meta-data",
 		});
 
@@ -88,19 +83,8 @@ Here's a **neat** demo:
 			Qwik.jsx(Component, { components: { strong: SpanBold } }),
 		);
 
-		// Qwik's output contains HTML comments for resumability markers.
-		// This expected output is specific to Qwik v1.x.
-		// It might change in Qwik v2.
-		// The exact structure of comments <!--qv X--> can vary.
-		// Using .toContain or regex might be more robust if exact comment content is unstable.
 		const expectedHTML = `<h1>This is the title</h1><p>Here's a <span class="strong">neat</span> demo:</p><div>mdx-bundler with Qwik's runtime!</div>`;
 
-		// Normalize HTML for comparison (remove extra whitespace between tags, etc.)
-		const normalizeHTML = (html: string) =>
-			html.replace(/\n\s*/g, "").replace(/>\s+</g, "><").trim();
-
-		expect(normalizeHTML(container.innerHTML)).toBe(
-			normalizeHTML(expectedHTML),
-		);
+		expect(container.innerHTML).toBe(expectedHTML);
 	});
 });

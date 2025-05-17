@@ -17,7 +17,6 @@ export interface MdxJsxConfig {
 		varName?: string;
 		package?: string;
 	};
-	// jsxDom might be needed for some runtimes, but less common for MDX plugin
 	jsxDom?: {
 		varName?: string;
 		package?: string;
@@ -34,8 +33,6 @@ export interface BundleMDXOptions {
 	) => MdxPluginOptions;
 	globals?: Record<string, string>;
 	jsxConfig?: MdxJsxConfig;
-	// Rolldown specific options can be added here if needed
-	// For now, we'll derive them or use sensible defaults.
 }
 
 export interface BundleMDXResult {
@@ -75,13 +72,13 @@ export async function bundleMDX({
 		);
 	}
 
-	const entryPointId = "entry.mdx"; // Standard virtual module name
+	const entryPointId = "entry.mdx";
 	let vfile: VFile;
 
 	if (typeof source === "string") {
 		vfile = new VFile({
 			value: source,
-			path: resolve(cwd, "source.mdx"), // Conceptual path for VFile
+			path: resolve(cwd, "source.mdx"),
 		});
 	} else {
 		vfile = source;
@@ -90,26 +87,24 @@ export async function bundleMDX({
 		}
 	}
 
-	// Extract frontmatter using gray-matter directly
 	const {
 		data: frontmatterData,
-		content: mdxContentAfterFrontmatter,
+		content: mdxBody,
 		...restOfMatter
 	} = matter(String(vfile.value));
+
 	const frontmatter = frontmatterData || {};
 	console.log("[bundleMDX] Extracted frontmatter:", frontmatter);
 	console.log(
 		"[bundleMDX] MDX content after frontmatter (first 100 chars):",
-		mdxContentAfterFrontmatter.substring(0, 100),
+		mdxBody.substring(0, 100),
 	);
 
-	vfile.value = mdxContentAfterFrontmatter; // Update vfile content to be without frontmatter for MDX plugin
-	// Store the full matter object if needed, similar to how vfile-matter might have attached it
-	// Or decide if only frontmatter and the stripped content are needed moving forward.
-	// For compatibility with existing structure, let's keep a similar shape for `bundleMDX` return.
-	const matterObject = {
+	vfile.value = mdxBody;
+
+	const mdxFileStructure = {
 		data: frontmatter,
-		content: mdxContentAfterFrontmatter,
+		content: mdxBody,
 		...restOfMatter,
 	};
 
@@ -176,9 +171,9 @@ export async function bundleMDX({
 			if (id === entryPointId) {
 				console.log(
 					`[inMemoryPlugin.load] Loading content for entry point '${id}' (first 100 chars):`,
-					mdxContentAfterFrontmatter.substring(0, 100),
+					mdxBody.substring(0, 100),
 				);
-				return mdxContentAfterFrontmatter; // Provide the MDX content for the entry point
+				return mdxBody;
 			}
 			if (files[id]) {
 				console.log(
@@ -192,42 +187,35 @@ export async function bundleMDX({
 		},
 	};
 
-	let mdxPluginOpts: MdxPluginOptions = {
+	let mdxOpts: MdxPluginOptions = {
 		remarkPlugins: [remarkFrontmatter, remarkMdxFrontmatter],
 		rehypePlugins: [],
-		jsx: false, // MDX plugin should output JS function calls
-		jsxRuntime: "automatic", // MDX v3 prefers automatic runtime
-		// MDX plugin will append '/jsx-runtime' to this value.
-		// So, provide the base package path for Qwik's actual JSX runtime.
-		jsxImportSource: jsxConfig?.jsxLib?.package, // Results in import from '@builder.io/qwik/jsx-runtime'
-		// pragma & pragmaFrag are deprecated in MDX v3 and were causing issues.
-		// providerImportSource: jsxConfig?.jsxLib?.package, // If MDXProvider is used
+		jsx: false,
+		jsxRuntime: "automatic",
+		jsxImportSource: jsxConfig?.jsxLib?.package,
 	};
 
 	if (mdxOptionsFn) {
-		mdxPluginOpts = mdxOptionsFn(mdxPluginOpts, frontmatter);
+		mdxOpts = mdxOptionsFn(mdxOpts, frontmatter);
 	}
-	console.log("[bundleMDX] Final MDX Plugin Options:", mdxPluginOpts);
+	console.log("[bundleMDX] Final MDX Plugin Options:", mdxOpts);
+
+	const jsxOpts: InputOptions["jsx"] = {
+		mode: "automatic",
+		jsxImportSource: jsxConfig?.jsxLib?.package,
+	};
 
 	const inputOpts: InputOptions = {
-		input: entryPointId, // Input is the virtual MDX entry
+		input: entryPointId,
 		plugins: [
 			inMemoryPlugin,
-			mdx(mdxPluginOpts),
+			mdx(mdxOpts),
 			qwikRollup({
 				entryStrategy: { type: "inline" },
 			}),
 		],
 		external: Object.keys(globals),
-		// Rolldown handles JSX in .tsx files (like demo.tsx) using Qwik's automatic runtime
-		jsx: jsxConfig?.jsxLib?.package // If jsxLib is configured, assume we want Qwik JSX processing
-			? {
-					mode: "automatic",
-					// Rolldown's transform (like MDX plugin) will append '/jsx-runtime' to this.
-					jsxImportSource: jsxConfig.jsxLib.package, // e.g., '@builder.io/qwik' -> imports from '@builder.io/qwik/jsx-runtime'
-					// factory/fragment are not typically needed for automatic mode if jsxImportSource is correctly resolved.
-				}
-			: undefined,
+		jsx: jsxConfig?.jsxLib?.package ? jsxOpts : undefined,
 	};
 	console.log(
 		"[bundleMDX] Rolldown Input Options:",
@@ -255,7 +243,6 @@ export async function bundleMDX({
 			"[bundleMDX] Rolldown build successful. Bundle object (keys):",
 			Object.keys(bundle),
 		);
-		// console.log('[bundleMDX] Rolldown bundle warnings:', bundle.warnings); // If Rolldown exposes warnings this way
 
 		console.log("[bundleMDX] Calling bundle.write(outputOpts)...");
 		const { output } = await bundle.write(outputOpts);
@@ -267,7 +254,6 @@ export async function bundleMDX({
 		if (output.length > 0 && output[0].type === "chunk") {
 			bundledCode = output[0].code;
 			console.log("[bundleMDX] Full Bundled code:", bundledCode);
-			// if (output[0].map) { /* handle sourcemap if needed */ }
 		} else {
 			console.error(
 				"[bundleMDX] No chunk generated by Rolldown or unexpected output type.",
@@ -278,22 +264,17 @@ export async function bundleMDX({
 		}
 	} catch (error: unknown) {
 		console.error("[bundleMDX] Error during Rolldown bundling/writing:", error);
-		// Rolldown might throw an error object that contains more details
-		// or might be a string. We'll capture it.
 		if (error instanceof Error) {
 			errors.push(error);
 		} else {
 			errors.push(new Error(String(error)));
 		}
-		// For now, rethrow or handle as per mdx-bundler's error reporting
-		// console.error("Rolldown bundling error:", error);
-		// throw error; // Or return it in the result
 	}
 
 	const result: BundleMDXResult = {
 		code: bundledCode,
 		frontmatter,
-		matter: matterObject, // Return the object from gray-matter
+		matter: mdxFileStructure,
 		errors,
 		warnings,
 	};
