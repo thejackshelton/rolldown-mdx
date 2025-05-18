@@ -18,6 +18,7 @@ import {
 	deriveGlobals,
 	getFrameworkConfig,
 } from "./framework-config";
+import { qwikIntegration } from "./integrations/qwik";
 import { createInMemoryPlugin } from "./plugins/memory";
 import { createImportsTransformPlugin } from "./plugins/transform";
 
@@ -238,13 +239,11 @@ export async function bundleMDX({
 
 	if (rolldownOpts.plugins) {
 		let userPlugins: RolldownPluginOption[] = [];
-
 		if (Array.isArray(rolldownOpts.plugins)) {
 			userPlugins = rolldownOpts.plugins;
-		} else {
+		} else if (rolldownOpts.plugins) {
 			userPlugins = [rolldownOpts.plugins];
 		}
-
 		inputOpts.plugins = [...defaultPlugins, ...userPlugins];
 	}
 
@@ -258,8 +257,24 @@ export async function bundleMDX({
 		}
 	}
 
+	if (framework === "qwik") {
+		let currentPluginsNormalized: RolldownPluginOption[] = [];
+		if (Array.isArray(inputOpts.plugins)) {
+			currentPluginsNormalized = inputOpts.plugins;
+		} else if (inputOpts.plugins) {
+			currentPluginsNormalized = [inputOpts.plugins];
+		} else {
+			currentPluginsNormalized = [];
+		}
+		inputOpts.plugins = await qwikIntegration(
+			currentPluginsNormalized,
+			defaultPlugins,
+			debug,
+		);
+	}
+
 	debug(
-		"[bundleMDX] Rolldown Input Options:",
+		"[bundleMDX] Final Rolldown Input Options:",
 		JSON.stringify(inputOpts, null, 2),
 	);
 

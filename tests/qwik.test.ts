@@ -36,13 +36,6 @@ Here's a **neat** demo:
 			},
 			framework: "qwik",
 			debug: true,
-			rolldown: {
-				plugins: [
-					qwikRollup({
-						entryStrategy: { type: "inline" },
-					}),
-				],
-			},
 		});
 
 		expect(result.errors).toEqual([]);
