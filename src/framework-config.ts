@@ -13,8 +13,7 @@ export type SupportedFramework =
 	| "solid"
 	| "vue"
 	| "qwik"
-	| "hono"
-	| "svelte";
+	| "hono";
 
 /**
  * Framework import type (allows any properties)
@@ -56,7 +55,8 @@ export const frameworkConfigs: Record<SupportedFramework, MdxJsxConfig> = {
 	},
 	preact: {
 		jsxLib: { package: "preact", varName: "Preact" },
-		jsxRuntime: { package: "preact/jsx-runtime", varName: "_jsx" },
+		jsxRuntime: { package: "preact/jsx-runtime", varName: "_jsx_runtime" },
+		jsxDom: { package: "preact/compat", varName: "PreactDOM" },
 		jsxImportKeys: {
 			jsx: ["jsx", "createElement"],
 			jsxs: ["jsxs", "jsx", "createElement"],
@@ -74,7 +74,7 @@ export const frameworkConfigs: Record<SupportedFramework, MdxJsxConfig> = {
 	},
 	vue: {
 		jsxLib: { package: "vue", varName: "Vue" },
-		jsxRuntime: { package: "vue/jsx-runtime", varName: "_jsx" },
+		jsxRuntime: { package: "vue/jsx-runtime", varName: "_jsx_runtime" },
 		jsxImportKeys: {
 			jsx: "jsx",
 			jsxs: "jsxs",
@@ -95,17 +95,8 @@ export const frameworkConfigs: Record<SupportedFramework, MdxJsxConfig> = {
 	},
 	hono: {
 		jsxLib: { package: "hono/jsx", varName: "Hono" },
-		jsxRuntime: { package: "hono/jsx/jsx-runtime", varName: "_jsx" },
+		jsxRuntime: { package: "hono/jsx/jsx-runtime", varName: "_jsx_runtime" },
 		jsxDom: { package: "hono/jsx/dom", varName: "HonoDOM" },
-		jsxImportKeys: {
-			jsx: "jsx",
-			jsxs: "jsxs",
-			Fragment: "Fragment",
-		},
-	},
-	svelte: {
-		jsxLib: { package: "svelte", varName: "Svelte" },
-		jsxRuntime: { package: "svelte/internal", varName: "_svelte" },
 		jsxImportKeys: {
 			jsx: "jsx",
 			jsxs: "jsxs",
