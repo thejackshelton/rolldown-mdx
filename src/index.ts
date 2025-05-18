@@ -260,18 +260,11 @@ export async function bundleMDX({
 		jsxImportSource: jsxConfig?.jsxLib?.package,
 	};
 
-	// Create the imports transformation plugin
-	const createImportsTransformPlugin = (
-		jsxConfig: MdxJsxConfig,
-		globals: Record<string, string>,
-	) => ({
+	const createImportsTransformPlugin = (globals: Record<string, string>) => ({
 		name: "transform-imports-for-eval",
 		renderChunk(code: string) {
 			try {
-				// Parse code to AST
-				const result = parseSync("virtual.js", code, {
-					sourceType: "module",
-				});
+				const result = parseSync("virtual.js", code, { sourceType: "module" });
 
 				if (result.errors.length > 0) {
 					console.warn(
@@ -281,88 +274,56 @@ export async function bundleMDX({
 				}
 
 				const ast = result.program;
-
-				// First, we'll process import declarations
 				const imports: Array<{ source: string; specifiers: string[] }> = [];
+
 				const bodyWithoutImports = ast.body.filter((node) => {
-					// If it's an import declaration, save its information and remove it
-					if (
-						typeof node.type === "string" &&
-						node.type === "ImportDeclaration"
-					) {
-						// We need to use type casting since we're working with AST nodes
-						const importNode = node as {
-							source: { value: string };
-							specifiers?: Array<{
-								local?: { name: string };
-								imported?: { name: string };
-							}>;
-						};
+					if (typeof node.type !== "string") return true;
+					if (node.type !== "ImportDeclaration") return true;
 
-						// Save import information for both global and non-global imports
-						const source = String(importNode.source.value);
-						// Extract imported names
-						const specifiers = (importNode.specifiers || []).map(
-							(spec) => spec.local?.name || spec.imported?.name || "default",
-						);
-						if (specifiers.length > 0) {
-							imports.push({ source, specifiers });
-						}
+					const importNode = node as {
+						source: { value: string };
+						specifiers?: Array<{
+							local?: { name: string };
+							imported?: { name: string };
+						}>;
+					};
 
-						return false; // Remove this node
+					const source = String(importNode.source.value);
+					const specifiers = (importNode.specifiers || [])
+						.map((spec) => spec.local?.name || spec.imported?.name || "default")
+						.filter(Boolean);
+
+					if (specifiers.length > 0) {
+						imports.push({ source, specifiers });
 					}
-					return true; // Keep other nodes
+
+					return false;
 				});
 
-				// Now transform exports to return statement
-				let exportsStatement = "";
-				let hasExports = false;
+				const bodyWithoutExports = bodyWithoutImports.filter(
+					(node) =>
+						!(typeof node.type === "string" && node.type.includes("Export")),
+				);
 
-				// Final body without exports
-				const bodyWithoutExports = bodyWithoutImports.filter((node) => {
-					if (typeof node.type === "string" && node.type.includes("Export")) {
-						hasExports = true;
-						return false; // Remove export nodes
+				const modifiedAst = { ...ast, body: bodyWithoutExports };
+				const processedCode = generate(modifiedAst);
+
+				let globalReferences = "";
+				for (const { source, specifiers } of imports) {
+					if (!Object.keys(globals).includes(source)) continue;
+
+					for (const specifier of specifiers) {
+						globalReferences += `const ${specifier} = ${globals[source]}.${specifier};\n`;
 					}
-					return true; // Keep other nodes
-				});
+				}
 
-				// Add a return statement at the end to handle MDXContent
-				exportsStatement = `return {
+				const exportsStatement = `return {
   default: typeof MDXContent !== 'undefined' ? MDXContent : null,
   frontmatter: typeof frontmatter !== 'undefined' ? frontmatter : {}
 };`;
 
-				// Rebuild AST without imports and with exports
-				const modifiedAst = {
-					...ast,
-					body: bodyWithoutExports,
-				};
-
-				// Generate code without imports and exports
-				let processedCode = generate(modifiedAst);
-
-				// Instead of trying to do dynamic imports inside the function,
-				// we'll build references to the global scope variables that
-				// should be passed in when evaluating the code
-				let globalReferences = "";
-
-				// Add global references for external imports
-				for (const imp of imports) {
-					// For imports like '@builder.io/qwik', we need to extract symbols like
-					// componentQrl, inlinedQrlDEV, etc. from the scope globals
-					if (Object.keys(globals).includes(imp.source)) {
-						for (const specifier of imp.specifiers) {
-							globalReferences += `const ${specifier} = ${globals[imp.source]}.${specifier};\n`;
-						}
-					}
-				}
-
-				// Add the transformed code with appropriate globals
-				processedCode = `${globalReferences}${processedCode}\n${exportsStatement}`;
-
 				return {
-					code: processedCode,
+					code: `${globalReferences}${processedCode}\n${exportsStatement}`,
 					map: null,
 				};
 			} catch (error) {
@@ -372,10 +333,7 @@ export async function bundleMDX({
 		},
 	});
 
-	const transformImportsPlugin = createImportsTransformPlugin(
-		jsxConfig,
-		globals,
-	);
+	const transformImportsPlugin = createImportsTransformPlugin(globals);
 
 	const inputOpts: InputOptions = {
 		input: entryPointId,
