@@ -11,7 +11,7 @@
  *  - `ExportedObject`: Defines the shape of all MDX exports (component, frontmatter, etc.).
  */
 
-export type GenericComponent<P = Record<string, unknown>, R = unknown> = (
+export type MDXComponent<P = Record<string, unknown>, R = unknown> = (
 	props: P,
 ) => R;
 
@@ -27,7 +27,7 @@ export type GenericComponent<P = Record<string, unknown>, R = unknown> = (
 export function getMDXComponent<
 	P = Record<string, unknown>,
 	R = unknown,
-	T extends GenericComponent<P, R> = GenericComponent<P, R>,
+	T extends MDXComponent<P, R> = MDXComponent<P, R>,
 >(code: string, scope: Record<string, unknown> = {}): T {
 	const mdxModule = getMDXExport<{
 		default?: T;
