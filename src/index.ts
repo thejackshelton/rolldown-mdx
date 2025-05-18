@@ -249,7 +249,7 @@ export async function bundleMDX({
 	};
 
 	if (mdxOptionsFn) {
-		mdxOpts = mdxOptionsFn(mdxOpts, frontmatter);
+		mdxOpts = { ...mdxOpts, ...mdxOptionsFn(mdxOpts, frontmatter) };
 	}
 	debug("[bundleMDX] Final MDX Plugin Options:", mdxOpts);
 
