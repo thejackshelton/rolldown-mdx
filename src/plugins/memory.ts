@@ -28,6 +28,13 @@ function findPathWithExt(
 	return null;
 }
 
+/**
+ * Virtual file system for MDX bundling that:
+ * - Handles MDX entry point resolution
+ * - Resolves imports between in-memory files
+ * - Manages file paths with/without extensions
+ * - Loads content from memory instead of disk
+ */
 export function createInMemoryPlugin({
 	entryPointId,
 	processedFiles,

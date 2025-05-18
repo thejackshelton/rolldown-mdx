@@ -1,6 +1,13 @@
 import { parseSync } from "oxc-parser";
 import { generate } from "astring";
 
+/**
+ * Transforms ESM module code into runtime-executable code by:
+ * - Converting imports to global references
+ * - Removing ESM exports
+ * - Adding standardized return statement
+ * - Enabling direct evaluation via new Function()/eval()
+ */
 export function createImportsTransformPlugin(globals: Record<string, string>) {
 	return {
 		name: "transform-imports-for-eval",
