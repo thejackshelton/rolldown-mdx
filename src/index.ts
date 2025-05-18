@@ -258,16 +258,8 @@ export async function bundleMDX({
 	}
 
 	if (framework === "qwik") {
-		let currentPluginsNormalized: RolldownPluginOption[] = [];
-		if (Array.isArray(inputOpts.plugins)) {
-			currentPluginsNormalized = inputOpts.plugins;
-		} else if (inputOpts.plugins) {
-			currentPluginsNormalized = [inputOpts.plugins];
-		} else {
-			currentPluginsNormalized = [];
-		}
 		inputOpts.plugins = await qwikIntegration(
-			currentPluginsNormalized,
+			inputOpts.plugins as RolldownPluginOption[],
 			defaultPlugins,
 			debug,
 		);
