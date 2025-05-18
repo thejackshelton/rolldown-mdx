@@ -11,65 +11,35 @@
  *  - `ExportedObject`: Defines the shape of all MDX exports (component, frontmatter, etc.).
  */
 
-export type MDXComponent<P = Record<string, unknown>, R = unknown> = (
-	props: P,
-) => R;
-
 /**
  * Creates a component from the bundled MDX code.
- * @template P The expected props type for the MDX component.
- * @template R The expected return type of the MDX component.
- * @template T The actual component function signature.
- * @param code The bundled MDX code string. This string is expected to be a function body that returns the MDX module exports.
- * @param scope An object of variables to make available within the MDX code's scope.
- * @returns The default exported MDX component, typed as T.
+ * @template P The props type for the MDX component.
+ * @template R The return type of the MDX component.
+ * @param {string} code - The bundled MDX code string.
+ * @param {Record<string, unknown>} scope - Object containing components and variables needed by the MDX.
+ * @return {(props: P) => R} The MDX component.
  */
-export function getMDXComponent<
-	P = Record<string, unknown>,
-	R = unknown,
-	T extends MDXComponent<P, R> = MDXComponent<P, R>,
->(code: string, scope: Record<string, unknown> = {}): T {
-	const mdxModule = getMDXExport<{
-		default?: T;
-		[key: string]: unknown;
-	}>(code, scope);
-
-	if (typeof mdxModule.default !== "function") {
-		throw new Error(
-			"MDX execution failed: The 'default' export is not a function. Make sure your MDX content exports a component as default.",
-		);
-	}
-	return mdxModule.default as T;
+function getMDXComponent<P = Record<string, unknown>, R = unknown>(
+	code: string,
+	scope: Record<string, unknown> = {},
+): (props: P) => R {
+	const mdxExport = getMDXExport<{ default: (props: P) => R }>(code, scope);
+	return mdxExport.default;
 }
 
 /**
  * Executes the bundled MDX code and returns all its exports.
- * @template ExportedObject The expected type of the entire module exports.
- * @param code The bundled MDX code string. This string is expected to be a function body that returns the MDX module exports.
- * @param scope An object of variables to make available within the MDX code's scope.
- * @returns The MDX module's exports.
+ * @template ExportedObject The type of the exported object.
+ * @param {string} code - The bundled MDX code string.
+ * @param {Record<string, unknown>} scope - Object containing components and variables needed by the MDX.
+ * @return {ExportedObject} The MDX module exports.
  */
-export function getMDXExport<ExportedObject = Record<string, unknown>>(
+function getMDXExport<ExportedObject = Record<string, unknown>>(
 	code: string,
 	scope: Record<string, unknown> = {},
 ): ExportedObject {
-	const fnScopeKeys = Object.keys(scope);
-	const fnScopeValues = Object.values(scope);
-
-	console.log(
-		"Executing MDX code with new Function. Code (first 300 chars):",
-		code.substring(0, 300),
-	);
-	console.log("Scope keys for new Function:", fnScopeKeys);
-
-	const fn = new Function(...fnScopeKeys, code);
-	const mdxModuleExports = fn(...fnScopeValues);
-
-	if (!mdxModuleExports) {
-		throw new Error(
-			"MDX module execution failed: The code did not return any exports.",
-		);
-	}
-
-	return mdxModuleExports as ExportedObject;
+	const fn = new Function(...Object.keys(scope), code);
+	return fn(...Object.values(scope));
 }
+
+export { getMDXComponent, getMDXExport };

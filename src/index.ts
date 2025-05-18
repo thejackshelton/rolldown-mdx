@@ -5,8 +5,10 @@ import remarkFrontmatter from "remark-frontmatter";
 import remarkMdxFrontmatter from "remark-mdx-frontmatter";
 import { VFile } from "vfile";
 import matter from "gray-matter";
-import { resolve, dirname, extname } from "pathe";
+import { resolve } from "pathe";
 import { qwikRollup } from "@builder.io/qwik/optimizer";
+import { createInMemoryPlugin } from "./plugins/memory";
+import { createImportsTransformPlugin } from "./plugins/transform";
 
 export interface MdxJsxConfig {
 	jsxLib?: {
@@ -128,118 +130,6 @@ export async function bundleMDX({
 		...restOfMatter,
 	};
 
-	function findPathWithExt(
-		basePath: string,
-		extensions: string[],
-		filesMap: Record<string, string>,
-	): string | null {
-		for (const ext of extensions) {
-			const pathWithExt = basePath + ext;
-			const isPathWithExtMatch = Object.prototype.hasOwnProperty.call(
-				filesMap,
-				pathWithExt,
-			);
-			if (isPathWithExtMatch) {
-				return pathWithExt;
-			}
-		}
-		return null;
-	}
-
-	const inMemoryPlugin = {
-		name: "in-memory-loader",
-		resolveId(id: string, importer?: string) {
-			debug(
-				`[inMemoryPlugin.resolveId] Attempting to resolve: '${id}' from importer: '${importer}'`,
-			);
-
-			if (id === entryPointId || id === `./${entryPointId}`) {
-				debug(
-					`[inMemoryPlugin.resolveId] Resolved '${id}' to special entry point '${entryPointId}'`,
-				);
-				return entryPointId;
-			}
-
-			let baseDir: string;
-			if (importer) {
-				if (importer === entryPointId) {
-					baseDir = dirname(vfile.path);
-				} else {
-					baseDir = dirname(importer);
-				}
-			} else {
-				baseDir = cwd;
-			}
-
-			const resolvedImportPath = resolve(baseDir, id);
-			debug(
-				`[inMemoryPlugin.resolveId] Resolved import path for '${id}': ${resolvedImportPath}`,
-			);
-
-			const isDirectKeyMatch = Object.prototype.hasOwnProperty.call(
-				processedFiles,
-				resolvedImportPath,
-			);
-			if (isDirectKeyMatch) {
-				debug(
-					`[inMemoryPlugin.resolveId] Resolved '${id}' to '${resolvedImportPath}' from processedFiles (direct key match).`,
-				);
-				return resolvedImportPath;
-			}
-
-			const importPathLacksExtension = !extname(resolvedImportPath);
-
-			if (importPathLacksExtension) {
-				const resolvedFullPath = findPathWithExt(
-					resolvedImportPath,
-					resolveExtensions,
-					processedFiles,
-				);
-				if (resolvedFullPath) {
-					debug(
-						`[inMemoryPlugin.resolveId] Resolved '${id}' to '${resolvedFullPath}' from processedFiles (added extension).`,
-					);
-					return resolvedFullPath;
-				}
-			}
-
-			debug(
-				`[inMemoryPlugin.resolveId] Failed to resolve '${id}' (resolvedImportPath: ${resolvedImportPath}) in processedFiles. Returning null.`,
-			);
-			return null;
-		},
-		load(id: string) {
-			debug(`[inMemoryPlugin.load] Attempting to load module with ID: '${id}'`);
-
-			const isEntryPoint = id === entryPointId;
-			if (isEntryPoint) {
-				debug(
-					`[inMemoryPlugin.load] Loading content for special entry point '${id}' (first 100 chars):`,
-					mdxBody.substring(0, 100),
-				);
-				return mdxBody;
-			}
-
-			const isInMemoryFile = Object.prototype.hasOwnProperty.call(
-				processedFiles,
-				id,
-			);
-
-			if (isInMemoryFile) {
-				debug(
-					`[inMemoryPlugin.load] Loading content for in-memory file '${id}' from processedFiles (first 100 chars):`,
-					processedFiles[id].substring(0, 100),
-				);
-				return processedFiles[id];
-			}
-
-			debug(
-				`[inMemoryPlugin.load] Module ID '${id}' not found in processedFiles or as entry point. The rolldown-mdx in-memory plugin will not load it.`,
-			);
-			return null;
-		},
-	};
-
 	let mdxOpts: MdxPluginOptions = {
 		remarkPlugins: [remarkFrontmatter, remarkMdxFrontmatter],
 		rehypePlugins: [],
@@ -258,6 +148,17 @@ export async function bundleMDX({
 		jsxImportSource: jsxConfig?.jsxLib?.package,
 	};
 
+	const inMemoryPlugin = createInMemoryPlugin({
+		entryPointId,
+		processedFiles,
+		vfile,
+		cwd,
+		resolveExtensions,
+		debug,
+	});
+
+	const transformImportsPlugin = createImportsTransformPlugin(globals);
+
 	const inputOpts: InputOptions = {
 		input: entryPointId,
 		plugins: [
@@ -266,6 +167,7 @@ export async function bundleMDX({
 			qwikRollup({
 				entryStrategy: { type: "inline" },
 			}),
+			transformImportsPlugin,
 		],
 		external: Object.keys(globals),
 		jsx: jsxConfig?.jsxLib?.package ? jsxOpts : undefined,
@@ -276,12 +178,12 @@ export async function bundleMDX({
 	);
 
 	const outputOpts: OutputOptions = {
-		format: "iife",
+		format: "esm",
 		name: "__MDX_CONTENT__",
 		globals: globals,
 		exports: "named",
 		sourcemap: false,
-		inlineDynamicImports: true,
+		inlineDynamicImports: false,
 	};
 	debug("[bundleMDX] Rolldown Output Options:", outputOpts);
 
