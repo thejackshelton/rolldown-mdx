@@ -12,10 +12,6 @@
  */
 
 /**
- * @typedef {import('../types').MDXContentProps} MDXContentProps
- */
-
-/**
  * Creates a component from the bundled MDX code.
  * @template P The props type for the MDX component.
  * @template R The return type of the MDX component.
