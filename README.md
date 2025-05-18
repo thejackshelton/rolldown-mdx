@@ -94,7 +94,6 @@ import { qwikRollup } from '@builder.io/qwik/optimizer';
 
 const result = await bundleMDX({
   source: mdxSource,
-  // not added yet, but will be soon
   rolldown: {
     plugins: [qwikRollup()],
   },

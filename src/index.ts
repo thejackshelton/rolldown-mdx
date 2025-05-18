@@ -1,11 +1,15 @@
-import { qwikRollup } from "@builder.io/qwik/optimizer";
 import mdx from "@mdx-js/rollup";
 import type { Options as MdxPluginOptions } from "@mdx-js/rollup";
 import matter from "gray-matter";
 import { resolve } from "pathe";
 import remarkFrontmatter from "remark-frontmatter";
 import remarkMdxFrontmatter from "remark-mdx-frontmatter";
-import { type InputOptions, type OutputOptions, rolldown } from "rolldown";
+import {
+	type InputOptions,
+	type OutputOptions,
+	type RolldownPluginOption,
+	rolldown,
+} from "rolldown";
 import { VFile } from "vfile";
 import { getMDXComponent, getMDXExport } from "./jsx";
 import { createInMemoryPlugin } from "./plugins/memory";
@@ -40,6 +44,10 @@ export interface BundleMDXOptions {
 	jsxConfig?: MdxJsxConfig;
 	resolveExtensions?: string[];
 	debug?: boolean;
+	/** Options passed to rolldown() - matches Rolldown's InputOptions type */
+	rolldown?: Omit<InputOptions, "input">;
+	/** Options passed to bundle.write() - matches Rolldown's OutputOptions type */
+	output?: OutputOptions;
 }
 
 export interface BundleMDXResult {
@@ -59,6 +67,8 @@ export async function bundleMDX({
 	jsxConfig = {},
 	resolveExtensions = [".tsx", ".ts", ".jsx", ".js", ".mdx", ".json"],
 	debug: isDebugMode = false,
+	rolldown: rolldownOpts = {},
+	output: outputOpts = {},
 }: BundleMDXOptions): Promise<BundleMDXResult> {
 	const debug = (...args: unknown[]) => {
 		if (isDebugMode) {
@@ -75,6 +85,8 @@ export async function bundleMDX({
 		jsxConfig,
 		resolveExtensions,
 		debug,
+		rolldownOpts,
+		outputOpts,
 	});
 
 	const processedFiles: Record<string, string> = {};
@@ -162,25 +174,44 @@ export async function bundleMDX({
 
 	const transformImportsPlugin = createImportsTransformPlugin(globals);
 
+	const defaultPlugins = [inMemoryPlugin, mdx(mdxOpts), transformImportsPlugin];
+
 	const inputOpts: InputOptions = {
 		input: entryPointId,
-		plugins: [
-			inMemoryPlugin,
-			mdx(mdxOpts),
-			qwikRollup({
-				entryStrategy: { type: "inline" },
-			}),
-			transformImportsPlugin,
-		],
+		plugins: defaultPlugins,
 		external: Object.keys(globals),
 		jsx: jsxConfig?.jsxLib?.package ? jsxOpts : undefined,
+		...rolldownOpts,
 	};
+
+	if (rolldownOpts.plugins) {
+		let userPlugins: RolldownPluginOption[] = [];
+
+		if (Array.isArray(rolldownOpts.plugins)) {
+			userPlugins = rolldownOpts.plugins;
+		} else {
+			userPlugins = [rolldownOpts.plugins];
+		}
+
+		inputOpts.plugins = [...defaultPlugins, ...userPlugins];
+	}
+
+	if (rolldownOpts.external) {
+		const userExternals = rolldownOpts.external;
+
+		if (Array.isArray(userExternals)) {
+			inputOpts.external = [...Object.keys(globals), ...userExternals];
+		} else {
+			inputOpts.external = userExternals;
+		}
+	}
+
 	debug(
 		"[bundleMDX] Rolldown Input Options:",
 		JSON.stringify(inputOpts, null, 2),
 	);
 
-	const outputOpts: OutputOptions = {
+	const defaultOutputOpts: OutputOptions = {
 		format: "esm",
 		name: "__MDX_CONTENT__",
 		globals: globals,
@@ -188,7 +219,13 @@ export async function bundleMDX({
 		sourcemap: false,
 		inlineDynamicImports: false,
 	};
-	debug("[bundleMDX] Rolldown Output Options:", outputOpts);
+
+	const mergedOutputOpts: OutputOptions = {
+		...defaultOutputOpts,
+		...outputOpts,
+	};
+
+	debug("[bundleMDX] Rolldown Output Options:", mergedOutputOpts);
 
 	let bundledCode = "";
 	const errors: Error[] = [];
@@ -203,7 +240,7 @@ export async function bundleMDX({
 		);
 
 		debug("[bundleMDX] Calling bundle.write(outputOpts)...");
-		const { output } = await bundle.write(outputOpts);
+		const { output } = await bundle.write(mergedOutputOpts);
 		debug(
 			"[bundleMDX] Rolldown write successful. Output (length):",
 			output.length,

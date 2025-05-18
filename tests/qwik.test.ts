@@ -1,4 +1,5 @@
 import * as Qwik from "@builder.io/qwik";
+import { qwikRollup } from "@builder.io/qwik/optimizer";
 import { render } from "@noma.to/qwik-testing-library";
 // @vitest-environment jsdom
 import { describe, expect, test } from "vitest";
@@ -59,6 +60,13 @@ Here's a **neat** demo:
 				"@builder.io/qwik/jsx-runtime": "_jsx_runtime",
 			},
 			debug: true,
+			rolldown: {
+				plugins: [
+					qwikRollup({
+						entryStrategy: { type: "inline" },
+					}),
+				],
+			},
 		});
 
 		expect(result.errors).toEqual([]);
