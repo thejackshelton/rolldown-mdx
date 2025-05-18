@@ -15,11 +15,7 @@ export type SupportedFramework =
 	| "qwik"
 	| "hono";
 
-/**
- * Framework import type (allows any properties)
- */
 export interface FrameworkImport {
-	// We don't need the specific JSX function types anymore since we're using string-based detection
 	[key: string]: unknown;
 }
 
