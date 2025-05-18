@@ -7,8 +7,11 @@ import remarkFrontmatter from "remark-frontmatter";
 import remarkMdxFrontmatter from "remark-mdx-frontmatter";
 import { type InputOptions, type OutputOptions, rolldown } from "rolldown";
 import { VFile } from "vfile";
+import { getMDXComponent, getMDXExport } from "./jsx";
 import { createInMemoryPlugin } from "./plugins/memory";
 import { createImportsTransformPlugin } from "./plugins/transform";
+
+export { getMDXComponent, getMDXExport };
 
 export interface MdxJsxConfig {
 	jsxLib?: {
