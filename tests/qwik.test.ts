@@ -87,7 +87,9 @@ Here's a **neat** demo:
 			Qwik.jsx(Component, { components: { strong: SpanBold } }),
 		);
 
-		const expectedHTML = `<h1>This is the title</h1><p>Here's a <span class="strong">neat</span> demo:</p><div>mdx-bundler with Qwik's runtime!</div>`;
+		const expectedHTML = `<h1>This is the title</h1>
+<p>Here's a <span class="strong">neat</span> demo:</p>
+<!--qv --><div>mdx-bundler with Qwik's runtime!</div><!--/qv-->`;
 
 		expect(container.innerHTML).toBe(expectedHTML);
 	});
