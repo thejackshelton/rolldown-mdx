@@ -3,29 +3,9 @@ import { qwikRollup } from "@builder.io/qwik/optimizer";
 import { render } from "@noma.to/qwik-testing-library";
 // @vitest-environment jsdom
 import { describe, expect, test } from "vitest";
-import { type MdxJsxConfig, bundleMDX, getMDXComponent } from "../src/index";
+import { bundleMDX, createMDXComponent } from "../src/index";
 
 describe("bundleMDX with Qwik", () => {
-	const jsxBundlerConfig: MdxJsxConfig = {
-		jsxLib: {
-			varName: "Qwik",
-			package: "@builder.io/qwik",
-		},
-		jsxRuntime: {
-			varName: "_jsx_runtime",
-			package: "@builder.io/qwik/jsx-runtime",
-		},
-	};
-
-	const jsxComponentConfig = {
-		Qwik,
-		_jsx_runtime: {
-			jsx: Qwik.jsx,
-			jsxs: Qwik.jsx,
-			Fragment: Qwik.Fragment,
-		},
-	};
-
 	const mdxSource = `
 ---
 title: Example Post
@@ -51,14 +31,10 @@ Here's a **neat** demo:
 	test("smoke test for qwik", async () => {
 		const result = await bundleMDX({
 			source: mdxSource,
-			jsxConfig: jsxBundlerConfig,
 			files: {
 				"./demo.tsx": demoTsx,
 			},
-			globals: {
-				"@builder.io/qwik": "Qwik",
-				"@builder.io/qwik/jsx-runtime": "_jsx_runtime",
-			},
+			framework: "qwik",
 			debug: true,
 			rolldown: {
 				plugins: [
@@ -72,10 +48,10 @@ Here's a **neat** demo:
 		expect(result.errors).toEqual([]);
 		expect(result.warnings).toEqual([]);
 
-		const Component = getMDXComponent<Record<string, unknown>, Qwik.JSXOutput>(
-			result.code,
-			jsxComponentConfig,
-		);
+		const Component = createMDXComponent<
+			Record<string, unknown>,
+			Qwik.JSXOutput
+		>(result, Qwik);
 
 		const SpanBold = (props: Qwik.PropsOf<"span">) => {
 			return Qwik.jsx("span", {
