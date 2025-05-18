@@ -70,7 +70,7 @@ export interface BundleMDXOptions {
 	source: string | VFile;
 	files?: Record<string, string>;
 	cwd?: string;
-	mdxOptions?: (
+	mdx?: (
 		options: MdxPluginOptions,
 		frontmatter: Record<string, unknown>,
 	) => MdxPluginOptions;
@@ -92,7 +92,7 @@ export async function bundleMDX({
 	source,
 	files = {},
 	cwd = process.cwd(),
-	mdxOptions: mdxOptionsFn,
+	mdx: mdxOptionsFn,
 	globals = {},
 	framework,
 	jsxConfig: userJsxConfig = {},
