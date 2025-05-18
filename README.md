@@ -1,25 +1,121 @@
-# Rolldown MDX
+# rolldown-mdx
 
-The easy MDX bundler. Built on top of rolldown, Rolldown MDX provides a powerful and flexible way to bundle your MDX content with its dependencies.
+The framework-agnostic MDX bundler powered by [rolldown](https://github.com/rolldown/rolldown).
 
-Inspired by [mdx-bundler](https://github.com/kentcdodds/mdx-bundler).
+## Why rolldown-mdx?
+
+**rolldown-mdx** is the ultimate solution for bundling MDX content in modern JavaScript applications:
+
+- **Framework Agnostic** - Works with React, Qwik, Solid, Vue, or any JSX-based framework - just provide the runtime
+- **Lightning Fast** - Achieves performance comparable to esbuild and mdx-bundler through rolldown's Rust core
+- **Extensible Pipeline** - Leverage rolldown's powerful plugin API for complete control over the transformation process
+- **Framework Optimizations** - Hook directly into your framework's compiler during bundling (Qwik, Solid, etc.)
+- **Full MDX Ecosystem** - Compatible with all your favorite MDX plugins and transformations
 
 ## Features
 
-- 🚀 Blazing fast bundling with rolldown
-- 🎯 TypeScript support out of the box
-- 📦 Bundle MDX with all its dependencies
-- 📝 Support for frontmatter and constants
-- 📱 Works with any framework and JSX runtime (Qwik, React, etc.)
-- 📚 Complete TypeScript types
-- 📦 Tree-shaking friendly
+### Any JSX Framework, Zero Lock-in
 
-## Install
+Unlike solutions that tie you to a specific framework, rolldown-mdx works with any JSX runtime. Simply specify your framework's JSX configuration:
+
+```js
+import { bundleMDX } from 'rolldown-mdx';
+
+// React
+const result = await bundleMDX({
+  source: mdxSource,
+  jsxConfig: {
+    jsxLib: { package: 'react' },
+    jsxRuntime: { package: 'react/jsx-runtime' }
+  }
+});
+
+// Qwik
+const result = await bundleMDX({
+  source: mdxSource,
+  jsxConfig: {
+    jsxLib: { package: '@builder.io/qwik' },
+    jsxRuntime: { package: '@builder.io/qwik/jsx-runtime' }
+  }
+});
+```
+
+### Powerful Plugin Ecosystem
+
+Easily extend your MDX processing pipeline with remark and rehype plugins:
+
+```js
+const result = await bundleMDX({
+  source: mdxSource,
+  mdxOptions: (options) => {
+    options.remarkPlugins = [
+      ...(options.remarkPlugins ?? []),
+      remarkGfm,
+      [remarkCodeHike, { theme: 'github-dark' }]
+    ]
+    options.rehypePlugins = [
+      ...(options.rehypePlugins ?? []),
+      rehypePrism
+    ]
+    return options
+  }
+});
+```
+
+### Framework Compiler Integration
+
+Leverage your framework's compiler optimizations directly in the MDX bundling process:
+
+```js
+import { qwikRollup } from '@builder.io/qwik/optimizer';
+
+const result = await bundleMDX({
+  source: mdxSource,
+  // not added yet, but will be soon
+  rolldown: {
+    plugins: [qwikRollup()],
+  },
+  jsxConfig: { jsxLib: { package: '@builder.io/qwik' } }
+});
+```
+
+### Built for Performance
+
+rolldown-mdx is built on rolldown's Rust-based architecture, providing:
+
+- Near-native parsing speeds
+- Efficient AST transformations
+- Optimized code generation
+
+## Installation
 
 ```bash
-pnpm add rolldown-mdx
+npm install rolldown-mdx
+```
+
+## Quick Start
+
+```js
+import { bundleMDX } from 'rolldown-mdx';
+
+const result = await bundleMDX({
+  source: `
+    # Hello, World!
+    
+    This is **MDX** content.
+    
+    <MyComponent prop="value" />
+  `,
+  // Configure for your framework
+  jsxConfig: {
+    jsxLib: { package: 'react' },
+  },
+});
+
+console.log(result.code);
+console.log(result.frontmatter);
 ```
 
 ## License
 
-MIT © 2025 Jack Shelton
+MIT
