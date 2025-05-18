@@ -260,65 +260,122 @@ export async function bundleMDX({
 		jsxImportSource: jsxConfig?.jsxLib?.package,
 	};
 
-	const stripImportsPlugin = {
-		name: "strip-imports-for-eval",
+	// Create the imports transformation plugin
+	const createImportsTransformPlugin = (
+		jsxConfig: MdxJsxConfig,
+		globals: Record<string, string>,
+	) => ({
+		name: "transform-imports-for-eval",
 		renderChunk(code: string) {
 			try {
-				// Extract the names of components used in the code
-				// For Qwik-specific components
-				const qwikComponentsUsed = [
-					"componentQrl",
-					"inlinedQrlDEV",
-					"_jsxQ",
-					"jsx",
-					"jsxs",
-					"Fragment",
-				];
-
-				// Generate declarations for these components
-				// These will reference the provided scope variables like Qwik and _jsx_runtime
-				const declarations = `
-// Make Qwik components available in this scope
-const { componentQrl, inlinedQrlDEV, _jsxQ } = Qwik;
-const { jsx, jsxs, Fragment } = _jsx_runtime;
-`;
-
-				// Parse and modify the AST to remove import declarations
+				// Parse code to AST
 				const result = parseSync("virtual.js", code, {
 					sourceType: "module",
 				});
 
 				if (result.errors.length > 0) {
-					console.warn("Parsing errors in stripImportsPlugin:", result.errors);
+					console.warn(
+						"Parsing errors in transform-imports plugin:",
+						result.errors,
+					);
 				}
 
 				const ast = result.program;
-				const modifiedBody = ast.body.filter((node) => {
-					return (
-						typeof node.type === "string" && node.type !== "ImportDeclaration"
-					);
+
+				// First, we'll process import declarations
+				const imports: Array<{ source: string; specifiers: string[] }> = [];
+				const bodyWithoutImports = ast.body.filter((node) => {
+					// If it's an import declaration, save its information and remove it
+					if (
+						typeof node.type === "string" &&
+						node.type === "ImportDeclaration"
+					) {
+						// We need to use type casting since we're working with AST nodes
+						const importNode = node as {
+							source: { value: string };
+							specifiers?: Array<{
+								local?: { name: string };
+								imported?: { name: string };
+							}>;
+						};
+
+						// Save import information for both global and non-global imports
+						const source = String(importNode.source.value);
+						// Extract imported names
+						const specifiers = (importNode.specifiers || []).map(
+							(spec) => spec.local?.name || spec.imported?.name || "default",
+						);
+						if (specifiers.length > 0) {
+							imports.push({ source, specifiers });
+						}
+
+						return false; // Remove this node
+					}
+					return true; // Keep other nodes
 				});
 
+				// Now transform exports to return statement
+				let exportsStatement = "";
+				let hasExports = false;
+
+				// Final body without exports
+				const bodyWithoutExports = bodyWithoutImports.filter((node) => {
+					if (typeof node.type === "string" && node.type.includes("Export")) {
+						hasExports = true;
+						return false; // Remove export nodes
+					}
+					return true; // Keep other nodes
+				});
+
+				// Add a return statement at the end to handle MDXContent
+				exportsStatement = `return {
+  default: typeof MDXContent !== 'undefined' ? MDXContent : null,
+  frontmatter: typeof frontmatter !== 'undefined' ? frontmatter : {}
+};`;
+
+				// Rebuild AST without imports and with exports
 				const modifiedAst = {
 					...ast,
-					body: modifiedBody,
+					body: bodyWithoutExports,
 				};
 
+				// Generate code without imports and exports
 				let processedCode = generate(modifiedAst);
 
-				// Add our declarations at the beginning
-				processedCode = declarations + processedCode;
+				// Instead of trying to do dynamic imports inside the function,
+				// we'll build references to the global scope variables that
+				// should be passed in when evaluating the code
+				let globalReferences = "";
+
+				// Add global references for external imports
+				for (const imp of imports) {
+					// For imports like '@builder.io/qwik', we need to extract symbols like
+					// componentQrl, inlinedQrlDEV, etc. from the scope globals
+					if (Object.keys(globals).includes(imp.source)) {
+						for (const specifier of imp.specifiers) {
+							globalReferences += `const ${specifier} = ${globals[imp.source]}.${specifier};\n`;
+						}
+					}
+				}
+
+				// Add the transformed code with appropriate globals
+				processedCode = `${globalReferences}${processedCode}\n${exportsStatement}`;
 
 				return {
 					code: processedCode,
 					map: null,
 				};
 			} catch (error) {
-				console.error("Error processing code for evaluation:", error);
+				console.error("Error transforming imports:", error);
 				return null;
 			}
 		},
-	};
+	});
+
+	const transformImportsPlugin = createImportsTransformPlugin(
+		jsxConfig,
+		globals,
+	);
 
 	const inputOpts: InputOptions = {
 		input: entryPointId,
@@ -328,7 +385,7 @@ const { jsx, jsxs, Fragment } = _jsx_runtime;
 			qwikRollup({
 				entryStrategy: { type: "inline" },
 			}),
-			stripImportsPlugin,
+			transformImportsPlugin,
 		],
 		external: Object.keys(globals),
 		jsx: jsxConfig?.jsxLib?.package ? jsxOpts : undefined,
