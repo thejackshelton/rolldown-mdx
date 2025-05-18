@@ -40,6 +40,29 @@ const result = await bundleMDX({
 });
 ```
 
+### Typed for Your Framework
+
+rolldown-mdx exports are deliberately generic, allowing you to provide your own framework-specific types and get precise TypeScript inference:
+
+```ts
+import { getMDXComponent } from 'rolldown-mdx';
+import * as Qwik from '@builder.io/qwik';
+
+// Framework-specific type safety
+const Component = getMDXComponent<Record<string, unknown>, Qwik.JSXOutput>(
+  result.code,
+  scope
+);
+
+// React example
+const ReactComponent = getMDXComponent<React.ComponentProps<'div'>, React.ReactNode>(
+  result.code, 
+  scope
+);
+```
+
+This flexible typing system means you get proper type checking and autocomplete that matches your specific framework.
+
 ### Powerful Plugin Ecosystem
 
 Easily extend your MDX processing pipeline with remark and rehype plugins:
