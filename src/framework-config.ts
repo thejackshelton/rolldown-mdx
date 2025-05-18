@@ -89,7 +89,7 @@ export const frameworkConfigs: Record<SupportedFramework, MdxJsxConfig> = {
 		},
 		jsxImportKeys: {
 			jsx: "jsx",
-			jsxs: "jsx", // Qwik uses its `jsx` for `jsxs` equivalent
+			jsxs: "jsx",
 			Fragment: "Fragment",
 		},
 	},

@@ -156,21 +156,8 @@ export function createMDXComponent<
 		.call(frameworkImport)
 		.toLowerCase();
 
-	const frameworkMap: Record<SupportedFramework, string> = {
-		qwik: "qwik",
-		react: "react",
-		preact: "preact",
-		solid: "solid",
-		vue: "vue",
-		hono: "hono",
-		svelte: "svelte",
-	};
-
-	for (const [fw, identifier] of Object.entries(frameworkMap) as [
-		SupportedFramework,
-		string,
-	][]) {
-		if (frameworkStr.includes(identifier)) {
+	for (const fw of Object.keys(frameworkConfigs) as SupportedFramework[]) {
+		if (frameworkStr.includes(fw)) {
 			return getMDXComponent<Props, Output>(
 				code,
 				getFrameworkRuntime(fw, frameworkImport),
