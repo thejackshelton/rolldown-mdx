@@ -177,11 +177,15 @@ export async function bundleMDX({
 		}
 	}
 
+	// Store the original source from vfile.value before it's modified.
+	// This original source will be used by the inMemoryPlugin for the entry point.
+	const originalFileSource = String(vfile.value);
+
 	const {
 		data: frontmatterData,
 		content: mdxBody,
 		...restOfMatter
-	} = matter(String(vfile.value));
+	} = matter(originalFileSource); // Parse from the original source
 
 	const frontmatter = frontmatterData || {};
 	debug("[bundleMDX] Extracted frontmatter:", frontmatter);
@@ -190,8 +194,6 @@ export async function bundleMDX({
 		mdxBody.substring(0, 100),
 	);
 
-	vfile.value = mdxBody;
-
 	const mdxFileStructure = {
 		data: frontmatter,
 		content: mdxBody,
@@ -199,7 +201,10 @@ export async function bundleMDX({
 	};
 
 	let mdxOpts: MdxPluginOptions = {
-		remarkPlugins: [remarkFrontmatter, remarkMdxFrontmatter],
+		remarkPlugins: [
+			remarkFrontmatter,
+			[remarkMdxFrontmatter, { name: "frontmatter" }],
+		],
 		rehypePlugins: [],
 		jsx: false,
 		jsxRuntime: "automatic",
@@ -224,6 +229,8 @@ export async function bundleMDX({
 		resolveExtensions,
 		debug,
 	});
+
+	vfile.value = mdxBody;
 
 	const transformImportsPlugin = createImportsTransformPlugin(mergedGlobals);
 
