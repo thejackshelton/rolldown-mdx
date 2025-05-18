@@ -1,5 +1,5 @@
-import { parseSync } from "oxc-parser";
 import { generate } from "astring";
+import { parseSync } from "oxc-parser";
 
 /**
  * Transforms ESM module code into runtime-executable code by:

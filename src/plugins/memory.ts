@@ -1,5 +1,5 @@
+import { dirname, extname, resolve } from "pathe";
 import type { VFile } from "vfile";
-import { resolve, dirname, extname } from "pathe";
 
 export interface InMemoryPluginOptions {
 	entryPointId: string;

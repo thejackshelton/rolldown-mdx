@@ -1,8 +1,8 @@
-// @vitest-environment jsdom
-import { describe, test, expect } from "vitest";
 import * as Qwik from "@builder.io/qwik";
 import { render } from "@noma.to/qwik-testing-library";
-import { bundleMDX, type MdxJsxConfig } from "../src/index";
+// @vitest-environment jsdom
+import { describe, expect, test } from "vitest";
+import { type MdxJsxConfig, bundleMDX } from "../src/index";
 import { getMDXComponent } from "../src/jsx";
 
 describe("bundleMDX with Qwik", () => {

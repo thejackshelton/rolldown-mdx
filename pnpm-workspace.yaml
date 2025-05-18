@@ -1,2 +1,4 @@
+ignoredBuiltDependencies:
+  - '@biomejs/biome'
 onlyBuiltDependencies:
   - rolldown
