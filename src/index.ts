@@ -7,6 +7,8 @@ import { VFile } from "vfile";
 import matter from "gray-matter";
 import { resolve, dirname, extname } from "pathe";
 import { qwikRollup } from "@builder.io/qwik/optimizer";
+import { parseSync } from "oxc-parser";
+import { generate } from "astring";
 
 export interface MdxJsxConfig {
 	jsxLib?: {
@@ -258,6 +260,66 @@ export async function bundleMDX({
 		jsxImportSource: jsxConfig?.jsxLib?.package,
 	};
 
+	const stripImportsPlugin = {
+		name: "strip-imports-for-eval",
+		renderChunk(code: string) {
+			try {
+				// Extract the names of components used in the code
+				// For Qwik-specific components
+				const qwikComponentsUsed = [
+					"componentQrl",
+					"inlinedQrlDEV",
+					"_jsxQ",
+					"jsx",
+					"jsxs",
+					"Fragment",
+				];
+
+				// Generate declarations for these components
+				// These will reference the provided scope variables like Qwik and _jsx_runtime
+				const declarations = `
+// Make Qwik components available in this scope
+const { componentQrl, inlinedQrlDEV, _jsxQ } = Qwik;
+const { jsx, jsxs, Fragment } = _jsx_runtime;
+`;
+
+				// Parse and modify the AST to remove import declarations
+				const result = parseSync("virtual.js", code, {
+					sourceType: "module",
+				});
+
+				if (result.errors.length > 0) {
+					console.warn("Parsing errors in stripImportsPlugin:", result.errors);
+				}
+
+				const ast = result.program;
+				const modifiedBody = ast.body.filter((node) => {
+					return (
+						typeof node.type === "string" && node.type !== "ImportDeclaration"
+					);
+				});
+
+				const modifiedAst = {
+					...ast,
+					body: modifiedBody,
+				};
+
+				let processedCode = generate(modifiedAst);
+
+				// Add our declarations at the beginning
+				processedCode = declarations + processedCode;
+
+				return {
+					code: processedCode,
+					map: null,
+				};
+			} catch (error) {
+				console.error("Error processing code for evaluation:", error);
+				return null;
+			}
+		},
+	};
+
 	const inputOpts: InputOptions = {
 		input: entryPointId,
 		plugins: [
@@ -266,6 +328,7 @@ export async function bundleMDX({
 			qwikRollup({
 				entryStrategy: { type: "inline" },
 			}),
+			stripImportsPlugin,
 		],
 		external: Object.keys(globals),
 		jsx: jsxConfig?.jsxLib?.package ? jsxOpts : undefined,
@@ -276,12 +339,12 @@ export async function bundleMDX({
 	);
 
 	const outputOpts: OutputOptions = {
-		format: "iife",
+		format: "esm",
 		name: "__MDX_CONTENT__",
 		globals: globals,
 		exports: "named",
 		sourcemap: false,
-		inlineDynamicImports: true,
+		inlineDynamicImports: false,
 	};
 	debug("[bundleMDX] Rolldown Output Options:", outputOpts);
 

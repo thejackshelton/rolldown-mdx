@@ -56,13 +56,29 @@ export function getMDXExport<ExportedObject = Record<string, unknown>>(
 	const fnScopeKeys = Object.keys(scope);
 	const fnScopeValues = Object.values(scope);
 
+	// Remove export statement at the end and add a return statement instead
+	// This is simple but effective for our typical MDX output pattern
+	let processedCode = code;
+
+	// Simple removal of export statement at the end
+	if (processedCode.includes("export {")) {
+		const lastExportIndex = processedCode.lastIndexOf("export {");
+		if (lastExportIndex !== -1) {
+			// Just delete the export line and add a return statement
+			const beforeExport = processedCode.substring(0, lastExportIndex);
+			processedCode = `${beforeExport}return {default: MDXContent, frontmatter: frontmatter};`;
+		}
+	}
+
+	console.log("CODEEE", processedCode);
+
 	console.log(
 		"Executing MDX code with new Function. Code (first 300 chars):",
-		code.substring(0, 300),
+		processedCode.substring(0, 300),
 	);
 	console.log("Scope keys for new Function:", fnScopeKeys);
 
-	const fn = new Function(...fnScopeKeys, code);
+	const fn = new Function(...fnScopeKeys, processedCode);
 	const mdxModuleExports = fn(...fnScopeValues);
 
 	if (!mdxModuleExports) {
