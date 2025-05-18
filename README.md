@@ -97,7 +97,7 @@ Easily extend your MDX processing pipeline with remark and rehype plugins:
 const result = await bundleMDX({
   source: mdxSource,
   framework: 'react',
-  mdxOptions: (options) => {
+  mdx: (options) => {
     options.remarkPlugins = [
       ...(options.remarkPlugins ?? []),
       remarkGfm,
