@@ -1,6 +1,6 @@
 {
 	"name": "rolldown-mdx",
-	"version": "0.0.4",
+	"version": "0.0.5",
 	"packageManager": "pnpm@10.11.0",
 	"description": "The easy MDX bundler",
 	"type": "module",
