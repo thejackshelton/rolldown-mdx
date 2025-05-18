@@ -59,14 +59,18 @@ Here's a **neat** demo:
 				"@builder.io/qwik": "Qwik",
 				"@builder.io/qwik/jsx-runtime": "_jsx_runtime",
 			},
+			debug: true,
 		});
 
 		expect(result.errors).toEqual([]);
 		expect(result.warnings).toEqual([]);
 
-		const Component = getMDXComponent(result.code, jsxComponentConfig) as any;
+		const Component = getMDXComponent<Record<string, unknown>, Qwik.JSXOutput>(
+			result.code,
+			jsxComponentConfig,
+		);
 
-		const SpanBold = (props: { children?: any }) => {
+		const SpanBold = (props: Qwik.PropsOf<"span">) => {
 			return Qwik.jsx("span", {
 				class: "strong",
 				children: props.children,
