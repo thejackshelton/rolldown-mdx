@@ -75,7 +75,7 @@ export interface BundleMDXOptions {
 	) => MdxPluginOptions;
 	/** Global mappings for external packages. Auto-derived with framework */
 	globals?: Record<string, string>;
-	/** Framework for auto JSX config and globals */
+	/** Framework for auto JSX config and globals, you MAY still need to pass in rolldown config for your framework (compiler, etc.) */
 	framework?: SupportedFramework;
 	/** Custom JSX config, rarely needed with framework */
 	jsxConfig?: MdxJsxConfig;
