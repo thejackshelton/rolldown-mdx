@@ -51,11 +51,10 @@ function getMDXExport<ExportedObject = Record<string, unknown>>(
 }
 
 /**
- * Get JSX runtime configuration for component creation.
- * Useful for advanced scenarios or debugging the runtime scope.
- * @param configInput - Can be a supported framework string or a custom MdxJsxConfig object.
- * @param frameworkImport - The imported framework module (e.g., React, Qwik).
- * @returns The scope object for the MDX component.
+ * Builds JSX runtime scope. (Advanced).
+ * @param configInput Framework name or MdxJsxConfig.
+ * @param frameworkImport Imported framework module.
+ * @returns MDX component runtime scope.
  */
 export function getFrameworkRuntime(
 	configInput: SupportedFramework | MdxJsxConfig,
@@ -113,19 +112,11 @@ export function getFrameworkRuntime(
 }
 
 /**
- * Creates an MDX component from bundled code, automatically handling framework runtime.
- *
- * @example
- * import { bundleMDX, createMDXComponent } from 'rolldown-mdx';
- * import * as React from 'react';
- *
- * const result = await bundleMDX({ source: mdxSource, framework: 'react' });
- * const Component = createMDXComponent(result, React);
- *
- * @param bundlerResult - The bundled MDX result (from `bundleMDX`) or a raw code string.
- * @param frameworkImport - The imported framework module (e.g., React, Qwik) used for the runtime.
- * @param explicitFramework - Optional. The specific framework (`SupportedFramework`) to use, overriding auto-detection or info from `bundlerResult`.
- * @returns The executable MDX component.
+ * Creates MDX component from bundled code.
+ * @param bundlerResult BundleMDXResult or code string.
+ * @param frameworkImport Imported framework module.
+ * @param explicitFramework Optional. Overrides auto-detected framework.
+ * @returns Executable MDX component.
  */
 export function createMDXComponent<
 	Props = Record<string, unknown>,
