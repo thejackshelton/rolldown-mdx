@@ -1,9 +1,8 @@
 import * as Qwik from "@builder.io/qwik";
 import { render } from "@noma.to/qwik-testing-library";
-import { getMDXComponent } from "rolldown-mdx";
 // @vitest-environment jsdom
 import { describe, expect, test } from "vitest";
-import { type MdxJsxConfig, bundleMDX } from "../src/index";
+import { type MdxJsxConfig, bundleMDX, getMDXComponent } from "../src/index";
 
 describe("bundleMDX with Qwik", () => {
 	const jsxBundlerConfig: MdxJsxConfig = {
