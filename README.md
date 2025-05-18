@@ -34,7 +34,7 @@ const result = await bundleMDX({
   framework: 'qwik'
 });
 
-// Also works with: preact, solid, vue, hono, svelte
+// Also works with: preact, solid, vue, hono
 ```
 
 You can also use a custom JSX configuration if needed:
