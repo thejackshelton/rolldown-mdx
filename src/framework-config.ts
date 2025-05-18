@@ -2,7 +2,7 @@
  * Framework configuration map for automatic setup
  */
 
-import type { MdxJsxConfig } from "./index";
+import type { MdxJsxConfig as BaseMdxJsxConfig } from "./index";
 
 /**
  * Frameworks that we support out of the box
@@ -25,12 +25,20 @@ export interface FrameworkImport {
 }
 
 /**
- * Runtime configuration for JSX
+ * Defines which keys on the frameworkImport provide the jsx, jsxs, and Fragment functions.
+ * Can be a single string (key name) or an array of strings (fallback key names).
  */
-export interface JsxRuntimeConfig {
-	jsx: (...args: unknown[]) => unknown;
-	jsxs: (...args: unknown[]) => unknown;
-	Fragment: unknown;
+export interface JsxImportKeys {
+	jsx?: string | string[];
+	jsxs?: string | string[];
+	Fragment?: string;
+}
+
+/**
+ * Extended MdxJsxConfig with keys for accessing JSX functions on the framework import.
+ */
+export interface MdxJsxConfig extends BaseMdxJsxConfig {
+	jsxImportKeys?: JsxImportKeys;
 }
 
 /**
@@ -40,18 +48,38 @@ export const frameworkConfigs: Record<SupportedFramework, MdxJsxConfig> = {
 	react: {
 		jsxLib: { package: "react", varName: "React" },
 		jsxRuntime: { package: "react/jsx-runtime", varName: "_jsx" },
+		jsxImportKeys: {
+			jsx: ["jsx", "createElement"],
+			jsxs: ["jsxs", "jsx", "createElement"],
+			Fragment: "Fragment",
+		},
 	},
 	preact: {
 		jsxLib: { package: "preact", varName: "Preact" },
 		jsxRuntime: { package: "preact/jsx-runtime", varName: "_jsx" },
+		jsxImportKeys: {
+			jsx: ["jsx", "createElement"],
+			jsxs: ["jsxs", "jsx", "createElement"],
+			Fragment: "Fragment",
+		},
 	},
 	solid: {
 		jsxLib: { package: "solid-js", varName: "Solid" },
 		jsxRuntime: { package: "solid-js/jsx-runtime", varName: "_jsx" },
+		jsxImportKeys: {
+			jsx: "jsx",
+			jsxs: "jsxs",
+			Fragment: "Fragment",
+		},
 	},
 	vue: {
 		jsxLib: { package: "vue", varName: "Vue" },
 		jsxRuntime: { package: "vue/jsx-runtime", varName: "_jsx" },
+		jsxImportKeys: {
+			jsx: "jsx",
+			jsxs: "jsxs",
+			Fragment: "Fragment",
+		},
 	},
 	qwik: {
 		jsxLib: { package: "@builder.io/qwik", varName: "Qwik" },
@@ -59,15 +87,30 @@ export const frameworkConfigs: Record<SupportedFramework, MdxJsxConfig> = {
 			package: "@builder.io/qwik/jsx-runtime",
 			varName: "_jsx_runtime",
 		},
+		jsxImportKeys: {
+			jsx: "jsx",
+			jsxs: "jsx", // Qwik uses its `jsx` for `jsxs` equivalent
+			Fragment: "Fragment",
+		},
 	},
 	hono: {
 		jsxLib: { package: "hono/jsx", varName: "Hono" },
 		jsxRuntime: { package: "hono/jsx/jsx-runtime", varName: "_jsx" },
 		jsxDom: { package: "hono/jsx/dom", varName: "HonoDOM" },
+		jsxImportKeys: {
+			jsx: "jsx",
+			jsxs: "jsxs",
+			Fragment: "Fragment",
+		},
 	},
 	svelte: {
 		jsxLib: { package: "svelte", varName: "Svelte" },
 		jsxRuntime: { package: "svelte/internal", varName: "_svelte" },
+		jsxImportKeys: {
+			jsx: "jsx",
+			jsxs: "jsxs",
+			Fragment: "Fragment",
+		},
 	},
 };
 

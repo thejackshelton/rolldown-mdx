@@ -13,6 +13,7 @@ import {
 import { VFile } from "vfile";
 import {
 	type FrameworkImport,
+	type MdxJsxConfig as FrameworkMdxJsxConfig,
 	type SupportedFramework,
 	deriveGlobals,
 	getFrameworkConfig,
@@ -45,19 +46,9 @@ export interface BundleMDXResult {
 	jsxConfig?: MdxJsxConfig;
 }
 
-import {
-	createMDXComponent,
-	getFrameworkRuntime,
-	getMDXComponent,
-	getMDXExport,
-} from "./jsx";
+import { createMDXComponent, getFrameworkRuntime } from "./jsx";
 
-export {
-	getMDXComponent,
-	getMDXExport,
-	createMDXComponent,
-	getFrameworkRuntime,
-};
+export { createMDXComponent, getFrameworkRuntime };
 
 export interface MdxJsxConfig {
 	jsxLib?: {
@@ -103,7 +94,7 @@ export async function bundleMDX({
 	mdxOptions: mdxOptionsFn,
 	globals = {},
 	framework,
-	jsxConfig = {},
+	jsxConfig: userJsxConfig = {},
 	resolveExtensions = [".tsx", ".ts", ".jsx", ".js", ".mdx", ".json"],
 	debug: isDebugMode = false,
 	rolldown: rolldownOpts = {},
@@ -115,23 +106,25 @@ export async function bundleMDX({
 		}
 	};
 
-	let mergedJsxConfig = { ...jsxConfig };
+	let activeJsxConfig: FrameworkMdxJsxConfig = { ...userJsxConfig };
 	let mergedGlobals = { ...globals };
 
 	if (framework) {
-		const frameworkJsxConfig = getFrameworkConfig(framework);
-
-		const frameworkGlobals = deriveGlobals(frameworkJsxConfig);
-
-		mergedJsxConfig = {
-			...frameworkJsxConfig,
-			...jsxConfig,
+		const frameworkConfigFromFile = getFrameworkConfig(framework);
+		const frameworkGlobals = deriveGlobals(frameworkConfigFromFile);
+		activeJsxConfig = {
+			...frameworkConfigFromFile,
+			jsxLib: { ...frameworkConfigFromFile.jsxLib, ...userJsxConfig.jsxLib },
+			jsxRuntime: {
+				...frameworkConfigFromFile.jsxRuntime,
+				...userJsxConfig.jsxRuntime,
+			},
+			jsxDom: { ...frameworkConfigFromFile.jsxDom, ...userJsxConfig.jsxDom },
 		};
-
-		mergedGlobals = {
-			...frameworkGlobals,
-			...globals,
-		};
+		mergedGlobals = { ...frameworkGlobals, ...globals };
+	} else if (Object.keys(userJsxConfig).length > 0) {
+		const customGlobals = deriveGlobals(userJsxConfig);
+		mergedGlobals = { ...customGlobals, ...globals };
 	}
 
 	debug("[bundleMDX] Initial options:", {
@@ -141,7 +134,7 @@ export async function bundleMDX({
 		hasMdxOptionsFn: !!mdxOptionsFn,
 		globals: mergedGlobals,
 		framework,
-		jsxConfig: mergedJsxConfig,
+		jsxConfig: activeJsxConfig,
 		resolveExtensions,
 		debug,
 		rolldownOpts,
@@ -209,7 +202,7 @@ export async function bundleMDX({
 		rehypePlugins: [],
 		jsx: false,
 		jsxRuntime: "automatic",
-		jsxImportSource: mergedJsxConfig?.jsxLib?.package,
+		jsxImportSource: activeJsxConfig?.jsxLib?.package,
 	};
 
 	if (mdxOptionsFn) {
@@ -219,7 +212,7 @@ export async function bundleMDX({
 
 	const jsxOpts: InputOptions["jsx"] = {
 		mode: "automatic",
-		jsxImportSource: mergedJsxConfig?.jsxLib?.package,
+		jsxImportSource: activeJsxConfig?.jsxLib?.package,
 	};
 
 	const inMemoryPlugin = createInMemoryPlugin({
@@ -239,7 +232,7 @@ export async function bundleMDX({
 		input: entryPointId,
 		plugins: defaultPlugins,
 		external: Object.keys(mergedGlobals),
-		jsx: mergedJsxConfig?.jsxLib?.package ? jsxOpts : undefined,
+		jsx: activeJsxConfig?.jsxLib?.package ? jsxOpts : undefined,
 		...rolldownOpts,
 	};
 
@@ -331,32 +324,21 @@ export async function bundleMDX({
 		matter: mdxFileStructure,
 		errors,
 		warnings,
+		jsxConfig: activeJsxConfig,
 	};
 
-	// Add framework information if a framework was specified
 	if (framework) {
 		result.framework = {
 			name: framework,
 			example: `
-// One-line component creation
 import { createMDXComponent } from 'rolldown-mdx';
-import * as ${mergedJsxConfig.jsxLib?.varName || "Framework"} from '${mergedJsxConfig.jsxLib?.package || framework}';
+import * as ${activeJsxConfig.jsxLib?.varName || "Framework"} from '${activeJsxConfig.jsxLib?.package || framework}';
 
 // Framework is auto-detected!
-const Component = createMDXComponent(result, ${mergedJsxConfig.jsxLib?.varName || "Framework"});
+const Component = createMDXComponent(result, ${activeJsxConfig.jsxLib?.varName || "Framework"});
 `,
 		};
 	}
 
-	result.jsxConfig = mergedJsxConfig;
-
-	debug("[bundleMDX] Returning result:", {
-		codeLength: result.code.length,
-		frontmatter: result.frontmatter,
-		errors: result.errors,
-		warnings: result.warnings,
-		framework: result.framework?.name,
-		jsxConfig: !!result.jsxConfig,
-	});
 	return result;
 }

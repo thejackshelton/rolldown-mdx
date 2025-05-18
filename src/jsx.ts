@@ -13,13 +13,14 @@
 
 import {
 	type FrameworkImport,
+	type MdxJsxConfig,
 	type SupportedFramework,
 	frameworkConfigs,
 } from "./framework-config";
 import type { BundleMDXResult } from "./index";
 
 /**
- * Creates a component from the bundled MDX code.
+ * Internal: Creates a component from the bundled MDX code with a pre-configured scope.
  * @template P The props type for the MDX component.
  * @template R The return type of the MDX component.
  * @param {string} code - The bundled MDX code string.
@@ -35,7 +36,7 @@ function getMDXComponent<P = Record<string, unknown>, R = unknown>(
 }
 
 /**
- * Executes the bundled MDX code and returns all its exports.
+ * Internal: Executes the bundled MDX code and returns all its exports with a pre-configured scope.
  * @template ExportedObject The type of the exported object.
  * @param {string} code - The bundled MDX code string.
  * @param {Record<string, unknown>} scope - Object containing components and variables needed by the MDX.
@@ -45,109 +46,86 @@ function getMDXExport<ExportedObject = Record<string, unknown>>(
 	code: string,
 	scope: Record<string, unknown> = {},
 ): ExportedObject {
-	// Ensure commonly needed runtime objects are available
-	const safeScope = { ...scope };
+	const fn = new Function(...Object.keys(scope), code);
+	return fn(...Object.values(scope));
+}
 
-	// Check if code references _jsx_runtime but it's not in scope
-	if (code.includes("_jsx_runtime") && !safeScope._jsx_runtime) {
-		safeScope._jsx_runtime = {
-			jsx: (type: unknown, props: Record<string, unknown>) => ({ type, props }),
-			jsxs: (type: unknown, props: Record<string, unknown>) => ({
-				type,
-				props,
-			}),
-			Fragment: Symbol("Fragment"),
+/**
+ * Get JSX runtime configuration for component creation.
+ * Useful for advanced scenarios or debugging the runtime scope.
+ * @param configInput - Can be a supported framework string or a custom MdxJsxConfig object.
+ * @param frameworkImport - The imported framework module (e.g., React, Qwik).
+ * @returns The scope object for the MDX component.
+ */
+export function getFrameworkRuntime(
+	configInput: SupportedFramework | MdxJsxConfig,
+	frameworkImport: FrameworkImport,
+): Record<string, unknown> {
+	const resolvedConfig: MdxJsxConfig =
+		typeof configInput === "string"
+			? frameworkConfigs[configInput]
+			: configInput;
+
+	const scope: Record<string, unknown> = {};
+
+	const mainLibVarName = resolvedConfig.jsxLib?.varName;
+	if (mainLibVarName) {
+		scope[mainLibVarName] = frameworkImport;
+	}
+
+	const resolveJsxImportKey = (
+		keys?: string | string[],
+		fallback?: unknown,
+	) => {
+		if (!keys) return fallback;
+		const keyArray = Array.isArray(keys) ? keys : [keys];
+		for (const key of keyArray) {
+			if (key in frameworkImport && frameworkImport[key] !== undefined) {
+				return frameworkImport[key];
+			}
+		}
+		return fallback;
+	};
+
+	const placeholderJsx = (
+		tag: unknown,
+		props: unknown,
+	): { tag: unknown; props: unknown } => ({ tag, props });
+
+	if (resolvedConfig.jsxRuntime?.varName) {
+		const importKeys = resolvedConfig.jsxImportKeys || {};
+
+		const jsx = resolveJsxImportKey(importKeys.jsx, placeholderJsx);
+		const jsxs = resolveJsxImportKey(importKeys.jsxs, jsx);
+		const Fragment = resolveJsxImportKey(
+			importKeys.Fragment,
+			Symbol("Fragment"),
+		);
+
+		scope[resolvedConfig.jsxRuntime.varName] = {
+			jsx,
+			jsxs,
+			Fragment,
 		};
 	}
 
-	const fn = new Function(...Object.keys(safeScope), code);
-	return fn(...Object.values(safeScope));
+	return scope;
 }
 
 /**
- * Get JSX runtime configuration for component creation
- */
-export function getFrameworkRuntime(
-	framework: SupportedFramework,
-	frameworkImport: FrameworkImport,
-): Record<string, unknown> {
-	const jsxConfig = frameworkConfigs[framework];
-
-	switch (framework) {
-		case "react":
-		case "preact": {
-			const varName = jsxConfig.jsxLib?.varName || "React";
-			return {
-				[varName]: frameworkImport,
-				_jsx: {
-					jsx: frameworkImport.jsx || frameworkImport.createElement,
-					jsxs:
-						frameworkImport.jsxs ||
-						frameworkImport.jsx ||
-						frameworkImport.createElement,
-					Fragment: frameworkImport.Fragment,
-				},
-			};
-		}
-
-		case "qwik": {
-			return {
-				Qwik: frameworkImport,
-				_jsx_runtime: {
-					jsx: frameworkImport.jsx,
-					jsxs: frameworkImport.jsx,
-					Fragment: frameworkImport.Fragment,
-				},
-			};
-		}
-
-		default: {
-			const mainLib = jsxConfig.jsxLib?.varName || "Framework";
-			const runtimeName = jsxConfig.jsxRuntime?.varName || "_jsx_runtime";
-
-			const defaultJsx = (
-				tag: unknown,
-				props: unknown,
-			): { tag: unknown; props: unknown } => ({ tag, props });
-
-			const result: Record<string, unknown> = {
-				[mainLib]: frameworkImport,
-			};
-
-			result[runtimeName] = {
-				jsx: frameworkImport.jsx || frameworkImport.createElement || defaultJsx,
-				jsxs:
-					frameworkImport.jsxs ||
-					frameworkImport.jsx ||
-					frameworkImport.createElement ||
-					defaultJsx,
-				Fragment: frameworkImport.Fragment || Symbol("Fragment"),
-			};
-
-			return result;
-		}
-	}
-}
-
-/**
- * Creates an MDX component with auto-detected framework runtime
+ * Creates an MDX component from bundled code, automatically handling framework runtime.
  *
  * @example
  * import { bundleMDX, createMDXComponent } from 'rolldown-mdx';
  * import * as React from 'react';
  *
- * const result = await bundleMDX({
- *   source: source,
- *   framework: 'react'
- * });
- *
- * // Pass the bundler result and framework import
+ * const result = await bundleMDX({ source: mdxSource, framework: 'react' });
  * const Component = createMDXComponent(result, React);
  *
- * @param bundlerResult - The bundled MDX result or code string
- * @param frameworkImport - The imported framework module (e.g., React, Qwik)
- * @param framework - Optional framework name (if auto-detection should be overridden)
- * @returns The MDX component
+ * @param bundlerResult - The bundled MDX result (from `bundleMDX`) or a raw code string.
+ * @param frameworkImport - The imported framework module (e.g., React, Qwik) used for the runtime.
+ * @param explicitFramework - Optional. The specific framework (`SupportedFramework`) to use, overriding auto-detection or info from `bundlerResult`.
+ * @returns The executable MDX component.
  */
 export function createMDXComponent<
 	Props = Record<string, unknown>,
@@ -155,50 +133,31 @@ export function createMDXComponent<
 >(
 	bundlerResult: BundleMDXResult | string,
 	frameworkImport: FrameworkImport,
-	framework?: SupportedFramework,
+	explicitFramework?: SupportedFramework,
 ): (props: Props) => Output {
 	const code =
 		typeof bundlerResult === "string" ? bundlerResult : bundlerResult.code;
 
-	// First priority: explicit framework parameter
-	if (framework) {
-		const runtime = getFrameworkRuntime(framework, frameworkImport);
-		return getMDXComponent<Props, Output>(code, runtime);
+	if (explicitFramework) {
+		return getMDXComponent<Props, Output>(
+			code,
+			getFrameworkRuntime(explicitFramework, frameworkImport),
+		);
 	}
 
-	// Second priority: framework from bundler result
-	if (typeof bundlerResult !== "string") {
-		// Check for framework info
+	const isBundlerResultObject = typeof bundlerResult !== "string";
+	if (isBundlerResultObject) {
 		if (bundlerResult.framework?.name) {
-			const runtime = getFrameworkRuntime(
-				bundlerResult.framework.name,
-				frameworkImport,
+			return getMDXComponent<Props, Output>(
+				code,
+				getFrameworkRuntime(bundlerResult.framework.name, frameworkImport),
 			);
-			return getMDXComponent<Props, Output>(code, runtime);
 		}
-
-		// Check for custom jsxConfig
 		if (bundlerResult.jsxConfig) {
-			// If jsxConfig exists but no framework, set up a generic runtime
-			const runtime = {
-				// Use the library name from config if available
-				[bundlerResult.jsxConfig.jsxLib?.varName || "JSXLibrary"]:
-					frameworkImport,
-			};
-
-			// Set up JSX runtime based on config
-			if (bundlerResult.jsxConfig.jsxRuntime?.varName) {
-				runtime[bundlerResult.jsxConfig.jsxRuntime.varName] = {
-					jsx: frameworkImport.jsx || frameworkImport.createElement,
-					jsxs:
-						frameworkImport.jsxs ||
-						frameworkImport.jsx ||
-						frameworkImport.createElement,
-					Fragment: frameworkImport.Fragment || Symbol("Fragment"),
-				};
-			}
-
-			return getMDXComponent<Props, Output>(code, runtime);
+			return getMDXComponent<Props, Output>(
+				code,
+				getFrameworkRuntime(bundlerResult.jsxConfig, frameworkImport),
+			);
 		}
 	}
 
@@ -228,11 +187,8 @@ export function createMDXComponent<
 		}
 	}
 
-	// Last resort: default to React
 	return getMDXComponent<Props, Output>(
 		code,
 		getFrameworkRuntime("react", frameworkImport),
 	);
 }
-
-export { getMDXComponent, getMDXExport };
