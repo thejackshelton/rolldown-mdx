@@ -218,3 +218,72 @@ import BadFile from './bad-file.unsupportedext'
 		}
 	});
 });
+
+test("files is optional", async () => {
+	const result = await bundleMDX({ source: "# Hello", framework: "qwik" });
+	expect(result.errors).toEqual([]);
+	expect(result.code).toContain("Hello");
+});
+
+test("processes TypeScript and TSX files correctly for Qwik", async () => {
+	const mdxSource = `
+import Demo from './demo.tsx'
+
+<Demo />
+  `.trim();
+
+	const demoQwikTsx = `
+import { component$ } from '@builder.io/qwik';
+import { getConditionalClasses } from './classUtils'; // Renamed and changed import
+
+const MyDemoComponent = component$(() => {
+  const isActive = true;
+  const hasError = false;
+  // Apply classes conditionally using the utility function
+  return <div class={getConditionalClasses(isActive, hasError)}>Dynamic Classes Test</div>;
+});
+
+export default MyDemoComponent;
+  `.trim();
+
+	const classUtilsTs = `
+import clsx from 'clsx';
+
+export const getConditionalClasses = (isActive: boolean, hasError: boolean): string => {
+  return clsx('base-style', {
+    'active-style': isActive,
+    'error-style': hasError,
+    'another-style': true,
+  });
+};
+  `.trim();
+
+	const result = await bundleMDX({
+		source: mdxSource,
+		files: {
+			"./demo.tsx": demoQwikTsx,
+			"./classUtils.ts": classUtilsTs,
+		},
+		framework: "qwik",
+	});
+
+	expect(result.errors).toEqual([]);
+	expect(result.warnings).toEqual([]);
+
+	const Component = createMDXComponent<Record<string, unknown>, Qwik.JSXOutput>(
+		result,
+		Qwik,
+	);
+
+	const { container } = await render(Qwik.jsx(Component, {}));
+
+	const divElement = container.querySelector("div");
+	expect(divElement).not.toBeNull();
+	if (divElement) {
+		expect(divElement.classList.contains("base-style")).toBe(true);
+		expect(divElement.classList.contains("active-style")).toBe(true);
+		expect(divElement.classList.contains("another-style")).toBe(true);
+		expect(divElement.classList.contains("error-style")).toBe(false);
+		expect(divElement.textContent).toBe("Dynamic Classes Test");
+	}
+});
