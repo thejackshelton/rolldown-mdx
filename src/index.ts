@@ -322,12 +322,16 @@ export async function bundleMDX({
 			);
 		}
 	} catch (error: unknown) {
-		console.error("[bundleMDX] Error during Rolldown bundling/writing:", error);
-		if (error instanceof Error) {
-			errors.push(error);
-		} else {
-			errors.push(new Error(String(error)));
+		if (isDebugMode) {
+			console.error(
+				"[bundleMDX] Error during Rolldown bundling/writing:",
+				error,
+			);
 		}
+		if (error instanceof Error) {
+			throw error;
+		}
+		throw new Error(String(error));
 	}
 
 	const result: BundleMDXResult = {

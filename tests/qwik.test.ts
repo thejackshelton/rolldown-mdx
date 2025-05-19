@@ -125,4 +125,134 @@ This is another MDX component, Qwik style!
 
 		expect(container.innerHTML).toEqual(expectedHtmlStructure);
 	});
+
+	test("should error when mdxSource imports a non-existent file", async () => {
+		const mdxSource = `
+import NonExistent from './non-existent-component'
+
+<NonExistent />
+`;
+		try {
+			await bundleMDX({
+				source: mdxSource,
+				files: {},
+				framework: "qwik",
+			});
+			expect(true).toBe(false); // Should not reach here, bundleMDX should throw
+		} catch (e: unknown) {
+			// The following error output to stderr from bundleMDX is expected and verified by this test.
+			let errorMessage =
+				"Error did not have a message property or was not an Error instance.";
+			if (e instanceof Error) {
+				errorMessage = e.message;
+			} else if (typeof e === "object" && e !== null && "message" in e) {
+				const potentialError = e as { message?: unknown };
+				if (typeof potentialError.message === "string") {
+					errorMessage = potentialError.message;
+				} else {
+					errorMessage = JSON.stringify(e);
+				}
+			} else if (typeof e === "string") {
+				errorMessage = e;
+			} else {
+				errorMessage = JSON.stringify(e);
+			}
+			expect(errorMessage).toMatch(
+				/Could not resolve '\.\/non-existent-component'/,
+			);
+			expect(errorMessage).toMatch(/entry\.mdx/);
+		}
+	});
+
+	test("should error when a file in 'files' imports a non-existent file", async () => {
+		const mdxSource = `
+import MyComponent from './my-component.tsx'
+
+<MyComponent />
+`;
+		const myComponentTsx = `
+import { component$ } from '@builder.io/qwik';
+import NonExistentNested from './non-existent-nested-import';
+
+const MyComponentInternal = component$(() => {
+  // @ts-expect-error NonExistentNested is not defined
+  return <div>Hello <NonExistentNested /></div>;
+});
+export default MyComponentInternal;
+`;
+		try {
+			await bundleMDX({
+				source: mdxSource,
+				files: {
+					"./my-component.tsx": myComponentTsx,
+				},
+				framework: "qwik",
+				debug: false,
+			});
+			expect(true).toBe(false); // Should not reach here
+		} catch (e: unknown) {
+			// The following error output to stderr from bundleMDX is expected and verified by this test.
+			let errorMessage =
+				"Error did not have a message property or was not an Error instance.";
+			if (e instanceof Error) {
+				errorMessage = e.message;
+			} else if (typeof e === "object" && e !== null && "message" in e) {
+				const potentialError = e as { message?: unknown };
+				if (typeof potentialError.message === "string") {
+					errorMessage = potentialError.message;
+				} else {
+					errorMessage = JSON.stringify(e);
+				}
+			} else if (typeof e === "string") {
+				errorMessage = e;
+			} else {
+				errorMessage = JSON.stringify(e);
+			}
+			expect(errorMessage).toMatch(
+				/Could not resolve '\.\/non-existent-nested-import'/,
+			);
+			expect(errorMessage).toMatch(/my-component\.tsx/);
+		}
+	});
+
+	test("should error when importing a file with an unsupported extension", async () => {
+		const mdxSource = `
+import BadFile from './bad-file.unsupportedext'
+
+<BadFile />
+`;
+		try {
+			await bundleMDX({
+				source: mdxSource,
+				files: {
+					"./bad-file.unsupportedext": "some content that is not valid js/ts",
+				},
+				framework: "qwik",
+				debug: false,
+			});
+			expect(true).toBe(false); // Should not reach here
+		} catch (e: unknown) {
+			// The following error output to stderr from bundleMDX is expected and verified by this test.
+			let errorMessage =
+				"Error did not have a message property or was not an Error instance.";
+			if (e instanceof Error) {
+				errorMessage = e.message;
+			} else if (typeof e === "object" && e !== null && "message" in e) {
+				const potentialError = e as { message?: unknown };
+				if (typeof potentialError.message === "string") {
+					errorMessage = potentialError.message;
+				} else {
+					errorMessage = JSON.stringify(e);
+				}
+			} else if (typeof e === "string") {
+				errorMessage = e;
+			} else {
+				errorMessage = JSON.stringify(e);
+			}
+			expect(errorMessage).toMatch(
+				/Expected a semicolon|parse error|syntax error/i,
+			);
+			expect(errorMessage).toMatch(/bad-file\.unsupportedext/);
+		}
+	});
 });
