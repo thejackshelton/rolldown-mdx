@@ -287,3 +287,56 @@ export const getConditionalClasses = (isActive: boolean, hasError: boolean): str
 		expect(divElement.textContent).toBe("Dynamic Classes Test");
 	}
 });
+
+test("can use a 'files' entry to override a 'node_modules' import for Qwik", async () => {
+	const myTestComponentTsx = `
+import { component$ } from '@builder.io/qwik';
+import myMockedClsx from 'clsx'; // This import will resolve to our mock in files
+
+export const MyTestComponent = component$(() => {
+  const classes = myMockedClsx('foo', { bar: true });
+  return <div class={classes}>Mocked clsx output: {classes}</div>;
+});
+	`.trim();
+
+	const mdxSource = `
+import { MyTestComponent } from './my-test-component.tsx'
+
+<MyTestComponent />
+  `.trim();
+
+	const mockClsxImplementation = `
+export default function mockedClsx(...args) {
+  return "mocked-clsx-was-definitely-used";
+};
+  `.trim();
+
+	const result = await bundleMDX({
+		source: mdxSource,
+		files: {
+			clsx: mockClsxImplementation,
+			"./my-test-component.tsx": myTestComponentTsx,
+		},
+		framework: "qwik",
+	});
+
+	expect(result.errors).toEqual([]);
+	expect(result.warnings).toEqual([]);
+
+	const Component = createMDXComponent<Record<string, unknown>, Qwik.JSXOutput>(
+		result,
+		Qwik,
+	);
+
+	const { container } = await render(Qwik.jsx(Component, {}));
+
+	const divElement = container.querySelector(
+		".mocked-clsx-was-definitely-used",
+	);
+	expect(divElement).not.toBeNull();
+	if (divElement) {
+		expect(divElement.textContent).toBe(
+			"Mocked clsx output: mocked-clsx-was-definitely-used",
+		);
+	}
+});
