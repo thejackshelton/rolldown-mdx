@@ -138,29 +138,17 @@ import NonExistent from './non-existent-component'
 				files: {},
 				framework: "qwik",
 			});
-			expect(true).toBe(false); // Should not reach here, bundleMDX should throw
+			throw new Error(
+				"bundleMDX was expected to throw an error, but it resolved successfully.",
+			);
 		} catch (e: unknown) {
-			// The following error output to stderr from bundleMDX is expected and verified by this test.
-			let errorMessage =
-				"Error did not have a message property or was not an Error instance.";
-			if (e instanceof Error) {
-				errorMessage = e.message;
-			} else if (typeof e === "object" && e !== null && "message" in e) {
-				const potentialError = e as { message?: unknown };
-				if (typeof potentialError.message === "string") {
-					errorMessage = potentialError.message;
-				} else {
-					errorMessage = JSON.stringify(e);
-				}
-			} else if (typeof e === "string") {
-				errorMessage = e;
-			} else {
-				errorMessage = JSON.stringify(e);
+			if (!(e instanceof Error)) {
+				throw new Error(`Caught a non-Error throwable: ${JSON.stringify(e)}`);
 			}
-			expect(errorMessage).toMatch(
+			expect(e.message).toMatch(
 				/Could not resolve '\.\/non-existent-component'/,
 			);
-			expect(errorMessage).toMatch(/entry\.mdx/);
+			expect(e.message).toMatch(/entry\.mdx/);
 		}
 	});
 
@@ -187,31 +175,18 @@ export default MyComponentInternal;
 					"./my-component.tsx": myComponentTsx,
 				},
 				framework: "qwik",
-				debug: false,
 			});
-			expect(true).toBe(false); // Should not reach here
+			throw new Error(
+				"bundleMDX was expected to throw an error, but it resolved successfully.",
+			);
 		} catch (e: unknown) {
-			// The following error output to stderr from bundleMDX is expected and verified by this test.
-			let errorMessage =
-				"Error did not have a message property or was not an Error instance.";
-			if (e instanceof Error) {
-				errorMessage = e.message;
-			} else if (typeof e === "object" && e !== null && "message" in e) {
-				const potentialError = e as { message?: unknown };
-				if (typeof potentialError.message === "string") {
-					errorMessage = potentialError.message;
-				} else {
-					errorMessage = JSON.stringify(e);
-				}
-			} else if (typeof e === "string") {
-				errorMessage = e;
-			} else {
-				errorMessage = JSON.stringify(e);
+			if (!(e instanceof Error)) {
+				throw new Error(`Caught a non-Error throwable: ${JSON.stringify(e)}`);
 			}
-			expect(errorMessage).toMatch(
+			expect(e.message).toMatch(
 				/Could not resolve '\.\/non-existent-nested-import'/,
 			);
-			expect(errorMessage).toMatch(/my-component\.tsx/);
+			expect(e.message).toMatch(/my-component\.tsx/);
 		}
 	});
 
@@ -228,31 +203,18 @@ import BadFile from './bad-file.unsupportedext'
 					"./bad-file.unsupportedext": "some content that is not valid js/ts",
 				},
 				framework: "qwik",
-				debug: false,
 			});
-			expect(true).toBe(false); // Should not reach here
+			throw new Error(
+				"bundleMDX was expected to throw an error, but it resolved successfully.",
+			);
 		} catch (e: unknown) {
-			// The following error output to stderr from bundleMDX is expected and verified by this test.
-			let errorMessage =
-				"Error did not have a message property or was not an Error instance.";
-			if (e instanceof Error) {
-				errorMessage = e.message;
-			} else if (typeof e === "object" && e !== null && "message" in e) {
-				const potentialError = e as { message?: unknown };
-				if (typeof potentialError.message === "string") {
-					errorMessage = potentialError.message;
-				} else {
-					errorMessage = JSON.stringify(e);
-				}
-			} else if (typeof e === "string") {
-				errorMessage = e;
-			} else {
-				errorMessage = JSON.stringify(e);
+			if (!(e instanceof Error)) {
+				throw new Error(`Caught a non-Error throwable: ${JSON.stringify(e)}`);
 			}
-			expect(errorMessage).toMatch(
+			expect(e.message).toMatch(
 				/Expected a semicolon|parse error|syntax error/i,
 			);
-			expect(errorMessage).toMatch(/bad-file\.unsupportedext/);
+			expect(e.message).toMatch(/bad-file\.unsupportedext/);
 		}
 	});
 });
