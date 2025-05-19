@@ -7,12 +7,44 @@ import {
 	parseSync,
 } from "oxc-parser";
 
+function processImportSpecifiers(
+	specifiers: ImportDeclaration["specifiers"],
+	globalVarName: string,
+): string {
+	let references = "";
+	if (!specifiers) {
+		return references;
+	}
+
+	for (const specifier of specifiers) {
+		if (specifier.type === "ImportSpecifier") {
+			const localName = specifier.local.name;
+			let importedName: string;
+			if (specifier.imported.type === "Identifier") {
+				importedName = specifier.imported.name;
+			} else {
+				importedName = specifier.imported.value;
+			}
+			references += `const ${localName} = ${globalVarName}.${importedName};\n`;
+		} else if (specifier.type === "ImportDefaultSpecifier") {
+			const localName = specifier.local.name;
+			references += `const ${localName} = ${globalVarName}.default || ${globalVarName};\n`;
+		} else if (specifier.type === "ImportNamespaceSpecifier") {
+			const localName = specifier.local.name;
+			references += `const ${localName} = ${globalVarName};\n`;
+		}
+	}
+	return references;
+}
+
 /**
- * Transforms ESM module code into runtime-executable code by:
- * - Converting imports for specified globals into variable declarations
- * - Removing other ESM imports
- * - Removing ESM exports
- * - Adding standardized return statement
+ * This plugin handles the following transformations:
+ * - Converts imports for specified globals into variable declarations
+ * - Removes other ESM imports
+ * - Removes ESM exports
+ * - Adds standardized return statement
+ *
+ * @param globals - Record mapping import sources to global variable names
  */
 export function createImportsTransformPlugin(globals: Record<string, string>) {
 	return {
@@ -46,36 +78,20 @@ export function createImportsTransformPlugin(globals: Record<string, string>) {
 
 						if (globals[source]) {
 							const globalVarName = globals[source];
-							if (importNode.specifiers) {
-								for (const specifier of importNode.specifiers) {
-									if (specifier.type === "ImportSpecifier") {
-										const localName = specifier.local.name;
-										let importedName: string;
-										if (specifier.imported.type === "Identifier") {
-											importedName = specifier.imported.name;
-										} else {
-											importedName = specifier.imported.value;
-										}
-										globalReferences += `const ${localName} = ${globalVarName}.${importedName};\n`;
-									} else if (specifier.type === "ImportDefaultSpecifier") {
-										const localName = specifier.local.name;
-										globalReferences += `const ${localName} = ${globalVarName}.default || ${globalVarName};\n`;
-									} else if (specifier.type === "ImportNamespaceSpecifier") {
-										const localName = specifier.local.name;
-										globalReferences += `const ${localName} = ${globalVarName};\n`;
-									}
-								}
-							}
-							continue;
+							globalReferences += processImportSpecifiers(
+								importNode.specifiers,
+								globalVarName,
+							);
 						}
+
 						continue;
 					}
 
-					if (
-						!(typeof node.type === "string" && node.type.includes("Export"))
-					) {
-						newBody.push(node);
+					if (typeof node.type === "string" && node.type.includes("Export")) {
+						continue;
 					}
+
+					newBody.push(node);
 				}
 
 				const modifiedAst: Program = {
