@@ -177,15 +177,13 @@ export async function bundleMDX({
 		}
 	}
 
-	// Store the original source from vfile.value before it's modified.
-	// This original source will be used by the inMemoryPlugin for the entry point.
 	const originalFileSource = String(vfile.value);
 
 	const {
 		data: frontmatterData,
 		content: mdxBody,
 		...restOfMatter
-	} = matter(originalFileSource); // Parse from the original source
+	} = matter(originalFileSource);
 
 	const frontmatter = frontmatterData || {};
 	debug("[bundleMDX] Extracted frontmatter:", frontmatter);
