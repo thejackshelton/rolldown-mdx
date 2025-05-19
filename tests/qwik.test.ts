@@ -118,7 +118,7 @@ This is another MDX component, Qwik style!
 
 		const expectedHtmlStructure = `<h1>This is the Qwik title</h1>
 
-<p>Here\'s a <span style="font-weight: bold; color: blue;">Qwik-powered</span> demo:</p>
+<p>Here's a <span style="font-weight: bold; color: blue;">Qwik-powered</span> demo:</p>
 <!--qv --><div class="my-demo-component special-qwik-class">Demo Content<!--qv --><div class="qwik-sub-dir"><!--qv q:key q:sref=1 q:s-->Sub dir content for Qwik!<!--/qv--></div><!--/qv--><p>JSON Data: Hello from Qwik JSON!</p><div>JS Module Says: Hello from JS Module for Qwik!</div></div><!--/qv-->
 <h2>Sub MDX Title: Another MDX for Qwik</h2>
 <p>This is another MDX component, Qwik style!</p>`;
