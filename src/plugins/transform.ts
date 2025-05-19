@@ -1,12 +1,18 @@
-import { generate } from "astring";
-import { parseSync } from "oxc-parser";
+import { GENERATOR as ASTRING_GENERATOR, generate } from "astring";
+import {
+	type ImportDeclaration,
+	type ParenthesizedExpression as OxcParenthesizedExpression,
+	type Program,
+	type Statement,
+	parseSync,
+} from "oxc-parser";
 
 /**
  * Transforms ESM module code into runtime-executable code by:
- * - Converting imports to global references
+ * - Converting imports for specified globals into variable declarations
+ * - Removing other ESM imports
  * - Removing ESM exports
  * - Adding standardized return statement
- * - Enabling direct evaluation via new Function()/eval()
  */
 export function createImportsTransformPlugin(globals: Record<string, string>) {
 	return {
@@ -22,49 +28,77 @@ export function createImportsTransformPlugin(globals: Record<string, string>) {
 					);
 				}
 
-				const ast = result.program;
-				const imports: Array<{ source: string; specifiers: string[] }> = [];
-
-				const bodyWithoutImports = ast.body.filter((node) => {
-					if (typeof node.type !== "string") return true;
-					if (node.type !== "ImportDeclaration") return true;
-
-					const importNode = node as {
-						source: { value: string };
-						specifiers?: Array<{
-							local?: { name: string };
-							imported?: { name: string };
-						}>;
-					};
-
-					const source = String(importNode.source.value);
-					const specifiers = (importNode.specifiers || [])
-						.map((spec) => spec.local?.name || spec.imported?.name || "default")
-						.filter(Boolean);
-
-					if (specifiers.length > 0) {
-						imports.push({ source, specifiers });
-					}
-
-					return false;
-				});
-
-				const bodyWithoutExports = bodyWithoutImports.filter(
-					(node) =>
-						!(typeof node.type === "string" && node.type.includes("Export")),
-				);
-
-				const modifiedAst = { ...ast, body: bodyWithoutExports };
-				const processedCode = generate(modifiedAst);
+				const ast = result.program as Program;
+				if (!ast || !ast.body) {
+					console.error(
+						"[transformImportsPlugin] Parsing failed or AST has no body.",
+					);
+					return null;
+				}
 
 				let globalReferences = "";
-				for (const { source, specifiers } of imports) {
-					if (!Object.keys(globals).includes(source)) continue;
+				const newBody: Statement[] = [];
 
-					for (const specifier of specifiers) {
-						globalReferences += `const ${specifier} = ${globals[source]}.${specifier};\n`;
+				for (const node of ast.body) {
+					if (node.type === "ImportDeclaration") {
+						const importNode = node as ImportDeclaration;
+						const source = importNode.source.value;
+
+						if (globals[source]) {
+							const globalVarName = globals[source];
+							if (importNode.specifiers) {
+								for (const specifier of importNode.specifiers) {
+									if (specifier.type === "ImportSpecifier") {
+										const localName = specifier.local.name;
+										let importedName: string;
+										if (specifier.imported.type === "Identifier") {
+											importedName = specifier.imported.name;
+										} else {
+											importedName = specifier.imported.value;
+										}
+										globalReferences += `const ${localName} = ${globalVarName}.${importedName};\n`;
+									} else if (specifier.type === "ImportDefaultSpecifier") {
+										const localName = specifier.local.name;
+										globalReferences += `const ${localName} = ${globalVarName}.default || ${globalVarName};\n`;
+									} else if (specifier.type === "ImportNamespaceSpecifier") {
+										const localName = specifier.local.name;
+										globalReferences += `const ${localName} = ${globalVarName};\n`;
+									}
+								}
+							}
+							continue;
+						}
+						continue;
+					}
+
+					if (
+						!(typeof node.type === "string" && node.type.includes("Export"))
+					) {
+						newBody.push(node);
 					}
 				}
+
+				const modifiedAst: Program = {
+					...ast,
+					body: newBody,
+				};
+
+				const customGenerator = {
+					...ASTRING_GENERATOR,
+					ParenthesizedExpression(
+						node: OxcParenthesizedExpression,
+						state: { write: (value: string) => void },
+					) {
+						state.write("(");
+						// biome-ignore lint/suspicious/noExplicitAny: astring type limitation
+						(this as any)[node.expression.type](node.expression, state);
+						state.write(")");
+					},
+				};
+
+				const processedCode = generate(modifiedAst, {
+					generator: customGenerator,
+				});
 
 				const exportsStatement = `return {
   default: typeof MDXContent !== 'undefined' ? MDXContent : null,
@@ -76,7 +110,18 @@ export function createImportsTransformPlugin(globals: Record<string, string>) {
 					map: null,
 				};
 			} catch (error) {
-				console.error("Error transforming imports:", error);
+				console.error(
+					"Error in transform-imports-for-eval (astring) plugin:",
+					error,
+				);
+				if (
+					error instanceof Error &&
+					error.message.includes("generator[node.type] is not a function")
+				) {
+					console.error(
+						"This specific error often indicates an AST node type that astring cannot handle.",
+					);
+				}
 				return null;
 			}
 		},
