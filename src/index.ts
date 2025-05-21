@@ -11,11 +11,45 @@ import {
 	rolldown,
 } from "rolldown";
 import { VFile } from "vfile";
-import { getMDXComponent, getMDXExport } from "./jsx";
+import {
+	type FrameworkImport,
+	type MdxJsxConfig as FrameworkMdxJsxConfig,
+	type SupportedFramework,
+	deriveGlobals,
+	getFrameworkConfig,
+} from "./framework-config";
+import { qwikIntegration } from "./integrations/qwik";
 import { createInMemoryPlugin } from "./plugins/memory";
 import { createImportsTransformPlugin } from "./plugins/transform";
 
-export { getMDXComponent, getMDXExport };
+export type { SupportedFramework, FrameworkImport };
+export { getFrameworkConfig };
+
+export interface BundleMDXResult {
+	code: string;
+	frontmatter: Record<string, unknown>;
+	matter: ReturnType<typeof matter>;
+	errors: Error[];
+	warnings: Error[];
+	/**
+	 * Framework information if a framework was specified
+	 */
+	framework?: {
+		/** The framework that was used */
+		name: SupportedFramework;
+		/** Example code for using the MDX component */
+		example: string;
+	};
+	/**
+	 * JSX configuration used to build the MDX
+	 * This is included even when no framework is specified
+	 */
+	jsxConfig?: MdxJsxConfig;
+}
+
+import { createMDXComponent, getFrameworkRuntime } from "./jsx";
+
+export { createMDXComponent, getFrameworkRuntime };
 
 export interface MdxJsxConfig {
 	jsxLib?: {
@@ -36,35 +70,32 @@ export interface BundleMDXOptions {
 	source: string | VFile;
 	files?: Record<string, string>;
 	cwd?: string;
-	mdxOptions?: (
+	mdx?: (
 		options: MdxPluginOptions,
 		frontmatter: Record<string, unknown>,
 	) => MdxPluginOptions;
+	/** Global mappings for external packages. Auto-derived with framework */
 	globals?: Record<string, string>;
+	/** Framework for auto JSX config and globals, you MAY still need to pass in rolldown config for your framework (compiler, etc.) */
+	framework?: SupportedFramework;
+	/** Custom JSX config, rarely needed with framework */
 	jsxConfig?: MdxJsxConfig;
 	resolveExtensions?: string[];
 	debug?: boolean;
-	/** Options passed to rolldown() - matches Rolldown's InputOptions type */
+	/** Rolldown input options */
 	rolldown?: Omit<InputOptions, "input">;
-	/** Options passed to bundle.write() - matches Rolldown's OutputOptions type */
+	/** Rolldown output options */
 	output?: OutputOptions;
-}
-
-export interface BundleMDXResult {
-	code: string;
-	frontmatter: Record<string, unknown>;
-	matter: ReturnType<typeof matter>;
-	errors: Error[];
-	warnings: Error[];
 }
 
 export async function bundleMDX({
 	source,
 	files = {},
 	cwd = process.cwd(),
-	mdxOptions: mdxOptionsFn,
+	mdx: mdxOptionsFn,
 	globals = {},
-	jsxConfig = {},
+	framework,
+	jsxConfig: userJsxConfig = {},
 	resolveExtensions = [".tsx", ".ts", ".jsx", ".js", ".mdx", ".json"],
 	debug: isDebugMode = false,
 	rolldown: rolldownOpts = {},
@@ -76,13 +107,35 @@ export async function bundleMDX({
 		}
 	};
 
+	let activeJsxConfig: FrameworkMdxJsxConfig = { ...userJsxConfig };
+	let mergedGlobals = { ...globals };
+
+	if (framework) {
+		const frameworkConfigFromFile = getFrameworkConfig(framework);
+		const frameworkGlobals = deriveGlobals(frameworkConfigFromFile);
+		activeJsxConfig = {
+			...frameworkConfigFromFile,
+			jsxLib: { ...frameworkConfigFromFile.jsxLib, ...userJsxConfig.jsxLib },
+			jsxRuntime: {
+				...frameworkConfigFromFile.jsxRuntime,
+				...userJsxConfig.jsxRuntime,
+			},
+			jsxDom: { ...frameworkConfigFromFile.jsxDom, ...userJsxConfig.jsxDom },
+		};
+		mergedGlobals = { ...frameworkGlobals, ...globals };
+	} else if (Object.keys(userJsxConfig).length > 0) {
+		const customGlobals = deriveGlobals(userJsxConfig);
+		mergedGlobals = { ...customGlobals, ...globals };
+	}
+
 	debug("[bundleMDX] Initial options:", {
 		source: typeof source === "string" ? "string" : "VFile",
 		files: Object.keys(files),
 		cwd,
 		hasMdxOptionsFn: !!mdxOptionsFn,
-		globals,
-		jsxConfig,
+		globals: mergedGlobals,
+		framework,
+		jsxConfig: activeJsxConfig,
 		resolveExtensions,
 		debug,
 		rolldownOpts,
@@ -124,11 +177,13 @@ export async function bundleMDX({
 		}
 	}
 
+	const originalFileSource = String(vfile.value);
+
 	const {
 		data: frontmatterData,
 		content: mdxBody,
 		...restOfMatter
-	} = matter(String(vfile.value));
+	} = matter(originalFileSource);
 
 	const frontmatter = frontmatterData || {};
 	debug("[bundleMDX] Extracted frontmatter:", frontmatter);
@@ -137,8 +192,6 @@ export async function bundleMDX({
 		mdxBody.substring(0, 100),
 	);
 
-	vfile.value = mdxBody;
-
 	const mdxFileStructure = {
 		data: frontmatter,
 		content: mdxBody,
@@ -146,11 +199,14 @@ export async function bundleMDX({
 	};
 
 	let mdxOpts: MdxPluginOptions = {
-		remarkPlugins: [remarkFrontmatter, remarkMdxFrontmatter],
+		remarkPlugins: [
+			remarkFrontmatter,
+			[remarkMdxFrontmatter, { name: "frontmatter" }],
+		],
 		rehypePlugins: [],
 		jsx: false,
 		jsxRuntime: "automatic",
-		jsxImportSource: jsxConfig?.jsxLib?.package,
+		jsxImportSource: activeJsxConfig?.jsxLib?.package,
 	};
 
 	if (mdxOptionsFn) {
@@ -160,7 +216,7 @@ export async function bundleMDX({
 
 	const jsxOpts: InputOptions["jsx"] = {
 		mode: "automatic",
-		jsxImportSource: jsxConfig?.jsxLib?.package,
+		jsxImportSource: activeJsxConfig?.jsxLib?.package,
 	};
 
 	const inMemoryPlugin = createInMemoryPlugin({
@@ -172,27 +228,27 @@ export async function bundleMDX({
 		debug,
 	});
 
-	const transformImportsPlugin = createImportsTransformPlugin(globals);
+	vfile.value = mdxBody;
+
+	const transformImportsPlugin = createImportsTransformPlugin(mergedGlobals);
 
 	const defaultPlugins = [inMemoryPlugin, mdx(mdxOpts), transformImportsPlugin];
 
 	const inputOpts: InputOptions = {
 		input: entryPointId,
 		plugins: defaultPlugins,
-		external: Object.keys(globals),
-		jsx: jsxConfig?.jsxLib?.package ? jsxOpts : undefined,
+		external: Object.keys(mergedGlobals),
+		jsx: activeJsxConfig?.jsxLib?.package ? jsxOpts : undefined,
 		...rolldownOpts,
 	};
 
 	if (rolldownOpts.plugins) {
 		let userPlugins: RolldownPluginOption[] = [];
-
 		if (Array.isArray(rolldownOpts.plugins)) {
 			userPlugins = rolldownOpts.plugins;
-		} else {
+		} else if (rolldownOpts.plugins) {
 			userPlugins = [rolldownOpts.plugins];
 		}
-
 		inputOpts.plugins = [...defaultPlugins, ...userPlugins];
 	}
 
@@ -200,21 +256,29 @@ export async function bundleMDX({
 		const userExternals = rolldownOpts.external;
 
 		if (Array.isArray(userExternals)) {
-			inputOpts.external = [...Object.keys(globals), ...userExternals];
+			inputOpts.external = [...Object.keys(mergedGlobals), ...userExternals];
 		} else {
 			inputOpts.external = userExternals;
 		}
 	}
 
+	if (framework === "qwik") {
+		inputOpts.plugins = await qwikIntegration(
+			inputOpts.plugins as RolldownPluginOption[],
+			defaultPlugins,
+			debug,
+		);
+	}
+
 	debug(
-		"[bundleMDX] Rolldown Input Options:",
+		"[bundleMDX] Final Rolldown Input Options:",
 		JSON.stringify(inputOpts, null, 2),
 	);
 
 	const defaultOutputOpts: OutputOptions = {
 		format: "esm",
 		name: "__MDX_CONTENT__",
-		globals: globals,
+		globals: mergedGlobals,
 		exports: "named",
 		sourcemap: false,
 		inlineDynamicImports: false,
@@ -258,12 +322,16 @@ export async function bundleMDX({
 			);
 		}
 	} catch (error: unknown) {
-		console.error("[bundleMDX] Error during Rolldown bundling/writing:", error);
-		if (error instanceof Error) {
-			errors.push(error);
-		} else {
-			errors.push(new Error(String(error)));
+		if (isDebugMode) {
+			console.error(
+				"[bundleMDX] Error during Rolldown bundling/writing:",
+				error,
+			);
 		}
+		if (error instanceof Error) {
+			throw error;
+		}
+		throw new Error(String(error));
 	}
 
 	const result: BundleMDXResult = {
@@ -272,12 +340,21 @@ export async function bundleMDX({
 		matter: mdxFileStructure,
 		errors,
 		warnings,
+		jsxConfig: activeJsxConfig,
 	};
-	debug("[bundleMDX] Returning result:", {
-		codeLength: result.code.length,
-		frontmatter: result.frontmatter,
-		errors: result.errors,
-		warnings: result.warnings,
-	});
+
+	if (framework) {
+		result.framework = {
+			name: framework,
+			example: `
+import { createMDXComponent } from 'rolldown-mdx';
+import * as ${activeJsxConfig.jsxLib?.varName || "Framework"} from '${activeJsxConfig.jsxLib?.package || framework}';
+
+// Framework is auto-detected!
+const Component = createMDXComponent(result, ${activeJsxConfig.jsxLib?.varName || "Framework"});
+`,
+		};
+	}
+
 	return result;
 }

@@ -7,6 +7,7 @@ The framework-agnostic MDX bundler powered by [rolldown](https://github.com/roll
 **rolldown-mdx** is the ultimate solution for bundling MDX content in modern JavaScript applications:
 
 - **Framework Agnostic** - Works with React, Qwik, Solid, Vue, or any JSX-based framework - just provide the runtime
+- **Auto-Detect Frameworks** - Automatically configures for your framework with a single line of code
 - **Lightning Fast** - Achieves performance comparable to esbuild and mdx-bundler through rolldown's Rust core
 - **Extensible Pipeline** - Leverage rolldown's powerful plugin API for complete control over the transformation process
 - **Framework Optimizations** - Hook directly into your framework's compiler during bundling (Qwik, Solid, etc.)
@@ -14,9 +15,9 @@ The framework-agnostic MDX bundler powered by [rolldown](https://github.com/roll
 
 ## Features
 
-### Any JSX Framework, Zero Lock-in
+### Simplified Framework Integration
 
-Unlike solutions that tie you to a specific framework, rolldown-mdx works with any JSX runtime. Simply specify your framework's JSX configuration:
+Just specify your framework and let rolldown-mdx handle all the configuration:
 
 ```js
 import { bundleMDX } from 'rolldown-mdx';
@@ -24,20 +25,45 @@ import { bundleMDX } from 'rolldown-mdx';
 // React
 const result = await bundleMDX({
   source: mdxSource,
-  jsxConfig: {
-    jsxLib: { package: 'react' },
-    jsxRuntime: { package: 'react/jsx-runtime' }
-  }
+  framework: 'react'
 });
 
 // Qwik
 const result = await bundleMDX({
   source: mdxSource,
+  framework: 'qwik'
+});
+
+// Also works with: preact, solid, vue, hono
+```
+
+You can also use a custom JSX configuration if needed:
+
+```js
+const result = await bundleMDX({
+  source: mdxSource,
   jsxConfig: {
-    jsxLib: { package: '@builder.io/qwik' },
-    jsxRuntime: { package: '@builder.io/qwik/jsx-runtime' }
+    jsxLib: { package: 'custom-jsx-lib', varName: 'CustomJSX' },
+    jsxRuntime: { package: 'custom-jsx-lib/jsx-runtime', varName: 'jsx_runtime' }
   }
 });
+
+// createMDXComponent will still work correctly
+const Component = createMDXComponent(result, CustomJSX);
+```
+
+### Intelligent Component Creation
+
+Create MDX components for your framework with minimal code:
+
+```js
+import { createMDXComponent } from 'rolldown-mdx';
+import * as React from 'react';
+
+// Easy component creation - just pass the result and framework
+const Component = createMDXComponent(result, React);
+
+// Framework is auto-detected from the import!
 ```
 
 ### Typed for Your Framework
@@ -45,19 +71,19 @@ const result = await bundleMDX({
 rolldown-mdx exports are deliberately generic, allowing you to provide your own framework-specific types and get precise TypeScript inference:
 
 ```ts
-import { getMDXComponent } from 'rolldown-mdx';
+import { createMDXComponent } from 'rolldown-mdx';
 import * as Qwik from '@builder.io/qwik';
 
 // Framework-specific type safety
-const Component = getMDXComponent<Record<string, unknown>, Qwik.JSXOutput>(
-  result.code,
-  scope
+const Component = createMDXComponent<Record<string, unknown>, Qwik.JSXOutput>(
+  result,
+  Qwik
 );
 
 // React example
-const ReactComponent = getMDXComponent<React.ComponentProps<'div'>, React.ReactNode>(
-  result.code, 
-  scope
+const ReactComponent = createMDXComponent<React.ComponentProps<'div'>, React.ReactNode>(
+  result, 
+  React
 );
 ```
 
@@ -70,7 +96,8 @@ Easily extend your MDX processing pipeline with remark and rehype plugins:
 ```js
 const result = await bundleMDX({
   source: mdxSource,
-  mdxOptions: (options) => {
+  framework: 'react',
+  mdx: (options) => {
     options.remarkPlugins = [
       ...(options.remarkPlugins ?? []),
       remarkGfm,
@@ -94,10 +121,10 @@ import { qwikRollup } from '@builder.io/qwik/optimizer';
 
 const result = await bundleMDX({
   source: mdxSource,
+  framework: 'qwik',
   rolldown: {
     plugins: [qwikRollup()],
-  },
-  jsxConfig: { jsxLib: { package: '@builder.io/qwik' } }
+  }
 });
 ```
 
@@ -118,8 +145,10 @@ npm install rolldown-mdx
 ## Quick Start
 
 ```js
-import { bundleMDX } from 'rolldown-mdx';
+import { bundleMDX, createMDXComponent } from 'rolldown-mdx';
+import * as React from 'react';
 
+// Bundle MDX content
 const result = await bundleMDX({
   source: `
     # Hello, World!
@@ -128,14 +157,14 @@ const result = await bundleMDX({
     
     <MyComponent prop="value" />
   `,
-  // Configure for your framework
-  jsxConfig: {
-    jsxLib: { package: 'react' },
-  },
+  framework: 'react'
 });
 
-console.log(result.code);
-console.log(result.frontmatter);
+// Create a component in one line
+const Component = createMDXComponent(result, React);
+
+// Render it
+<Component />
 ```
 
 ## License
