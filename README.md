@@ -22,16 +22,16 @@ Just specify your framework and let rolldown-mdx handle all the configuration:
 ```js
 import { bundleMDX } from 'rolldown-mdx';
 
-// React
-const result = await bundleMDX({
-  source: mdxSource,
-  framework: 'react'
-});
-
 // Qwik
 const result = await bundleMDX({
   source: mdxSource,
   framework: 'qwik'
+});
+
+// React
+const result = await bundleMDX({
+  source: mdxSource,
+  framework: 'react'
 });
 
 // Also works with: preact, solid, vue, hono
