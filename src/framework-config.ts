@@ -13,7 +13,8 @@ export type SupportedFramework =
 	| "solid"
 	| "vue"
 	| "qwik"
-	| "hono";
+	| "hono"
+	| "brisa";
 
 export interface FrameworkImport {
 	[key: string]: unknown;
@@ -93,6 +94,15 @@ export const frameworkConfigs: Record<SupportedFramework, MdxJsxConfig> = {
 		jsxLib: { package: "hono/jsx", varName: "Hono" },
 		jsxRuntime: { package: "hono/jsx/jsx-runtime", varName: "_jsx_runtime" },
 		jsxDom: { package: "hono/jsx/dom", varName: "HonoDOM" },
+		jsxImportKeys: {
+			jsx: "jsx",
+			jsxs: "jsxs",
+			Fragment: "Fragment",
+		},
+	},
+	brisa: {
+		jsxLib: { package: "brisa", varName: "Brisa" },
+		jsxRuntime: { package: "brisa/jsx-runtime", varName: "_jsx_runtime" },
 		jsxImportKeys: {
 			jsx: "jsx",
 			jsxs: "jsxs",
