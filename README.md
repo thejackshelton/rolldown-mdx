@@ -6,7 +6,7 @@ The framework-agnostic MDX bundler powered by [rolldown](https://github.com/roll
 
 **rolldown-mdx** is the ultimate solution for bundling MDX content in modern JavaScript applications:
 
-- **Framework Agnostic** - Works with React, Qwik, Solid, Vue, or any JSX-based framework - just provide the runtime
+- **Framework Agnostic** - Works with Qwik, Vue, React, Preact, Hono, Brisa, or any JSX-based framework - just provide `framework` option or custom JSX configuration.
 - **Auto-Detect Frameworks** - Automatically configures for your framework with a single line of code
 - **Lightning Fast** - Achieves performance comparable to esbuild and mdx-bundler through rolldown's Rust core
 - **Extensible Pipeline** - Leverage rolldown's powerful plugin API for complete control over the transformation process
