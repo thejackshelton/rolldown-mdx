@@ -1,3 +1,4 @@
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, extname, resolve } from "pathe";
 import type { VFile } from "vfile";
 
@@ -26,11 +27,30 @@ function findPathWithExt(
 }
 
 /**
+ * Check file system for a path, trying extensions if needed
+ */
+function findFileSystemPathWithExt(
+	basePath: string,
+	extensions: string[],
+): string | null {
+	if (existsSync(basePath)) {
+		return basePath;
+	}
+	for (const ext of extensions) {
+		const pathWithExt = basePath + ext;
+		if (existsSync(pathWithExt)) {
+			return pathWithExt;
+		}
+	}
+	return null;
+}
+
+/**
  * Virtual file system for MDX bundling that:
  * - Handles MDX entry point resolution
- * - Resolves imports between in-memory files
+ * - Resolves imports from in-memory files first (processedFiles)
+ * - Falls back to file system (like mdx-bundler/esbuild does automatically)
  * - Manages file paths with/without extensions
- * - Loads content from memory instead of disk
  */
 export function createInMemoryPlugin({
 	entryPointId,
@@ -70,11 +90,8 @@ export function createInMemoryPlugin({
 				`[inMemoryPlugin.resolveId] Resolved import path for '${id}': ${resolvedImportPath}`,
 			);
 
-			const isDirectKeyMatch = Object.hasOwn(
-				processedFiles,
-				resolvedImportPath,
-			);
-			if (isDirectKeyMatch) {
+			// 1. Check processedFiles (virtual file system) - direct match
+			if (Object.hasOwn(processedFiles, resolvedImportPath)) {
 				debug(
 					`[inMemoryPlugin.resolveId] Resolved '${id}' to '${resolvedImportPath}' from processedFiles (direct key match).`,
 				);
@@ -83,6 +100,7 @@ export function createInMemoryPlugin({
 
 			const importPathLacksExtension = !extname(resolvedImportPath);
 
+			// 2. Check processedFiles with extension resolution
 			if (importPathLacksExtension) {
 				const resolvedFullPath = findPathWithExt(
 					resolvedImportPath,
@@ -97,35 +115,53 @@ export function createInMemoryPlugin({
 				}
 			}
 
+			// 3. Fall back to file system (what esbuild does automatically for mdx-bundler)
+			const fsPath = findFileSystemPathWithExt(
+				resolvedImportPath,
+				importPathLacksExtension ? resolveExtensions : [],
+			);
+			if (fsPath) {
+				debug(
+					`[inMemoryPlugin.resolveId] Resolved '${id}' to '${fsPath}' from file system.`,
+				);
+				return fsPath;
+			}
+
 			debug(
-				`[inMemoryPlugin.resolveId] Failed to resolve '${id}' (resolvedImportPath: ${resolvedImportPath}) in processedFiles. Returning null.`,
+				`[inMemoryPlugin.resolveId] Failed to resolve '${id}' in processedFiles or file system. Returning null.`,
 			);
 			return null;
 		},
 		load(id: string): string | null {
 			debug(`[inMemoryPlugin.load] Attempting to load module with ID: '${id}'`);
 
-			const isEntryPoint = id === entryPointId;
-			if (isEntryPoint) {
+			// 1. Handle entry point
+			if (id === entryPointId) {
 				debug(
-					`[inMemoryPlugin.load] Loading content for special entry point '${id}' (first 100 chars):`,
-					String(vfile.value).substring(0, 100),
+					`[inMemoryPlugin.load] Loading content for special entry point '${id}'`,
 				);
 				return String(vfile.value);
 			}
 
-			const isInMemoryFile = Object.hasOwn(processedFiles, id);
-
-			if (isInMemoryFile) {
+			// 2. Check processedFiles (virtual file system)
+			if (Object.hasOwn(processedFiles, id)) {
 				debug(
-					`[inMemoryPlugin.load] Loading content for in-memory file '${id}' from processedFiles (first 100 chars):`,
-					processedFiles[id].substring(0, 100),
+					`[inMemoryPlugin.load] Loading content for in-memory file '${id}' from processedFiles`,
 				);
 				return processedFiles[id];
 			}
 
+			// 3. Fall back to file system (what esbuild does automatically for mdx-bundler)
+			if (existsSync(id)) {
+				const content = readFileSync(id, "utf-8");
+				debug(
+					`[inMemoryPlugin.load] Loading content for '${id}' from file system`,
+				);
+				return content;
+			}
+
 			debug(
-				`[inMemoryPlugin.load] Module ID '${id}' not found in processedFiles or as entry point. The rolldown-mdx in-memory plugin will not load it.`,
+				`[inMemoryPlugin.load] Module ID '${id}' not found. Returning null.`,
 			);
 			return null;
 		},

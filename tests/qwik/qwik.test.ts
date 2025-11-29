@@ -1,8 +1,10 @@
+import path from "node:path";
 import * as Qwik from "@builder.io/qwik";
 import { render } from "@noma.to/qwik-testing-library";
+import { VFile } from "vfile";
 // @vitest-environment jsdom
 import { describe, expect, test } from "vitest";
-import { bundleMDX, createMDXComponent } from "../src/index";
+import { bundleMDX, createMDXComponent } from "../../src/index";
 
 describe("bundleMDX with Qwik", () => {
 	test("comprehensive smoke test for qwik", async () => {
@@ -339,4 +341,219 @@ export default function mockedClsx(...args) {
 			"Mocked clsx output: mocked-clsx-was-definitely-used",
 		);
 	}
+});
+
+describe("file system fallback", () => {
+	const fixturesDir = __dirname;
+
+	test("resolves imports from file system when not in files map", async () => {
+		const mdxSource = `
+import { Counter } from "./components/counter.tsx";
+
+# File System Test
+
+<Counter />
+`.trim();
+
+		const result = await bundleMDX({
+			source: mdxSource,
+			cwd: fixturesDir,
+			framework: "qwik",
+		});
+
+		expect(result.errors).toEqual([]);
+		expect(result.code).toContain("counter-component");
+		expect(result.code).toContain("count-value");
+	});
+
+	test("resolves imports without extension from file system", async () => {
+		const mdxSource = `
+import { Greeting } from "./components/greeting";
+
+# Extension Resolution Test
+
+<Greeting name="Test User" />
+`.trim();
+
+		const result = await bundleMDX({
+			source: mdxSource,
+			cwd: fixturesDir,
+			framework: "qwik",
+		});
+
+		expect(result.errors).toEqual([]);
+		expect(result.code).toContain("greeting-component");
+	});
+
+	test("resolves TypeScript utility imports from file system", async () => {
+		const mdxSource = `
+import { formatMessage, GREETING_PREFIX } from "./utils/helpers";
+
+# Helper Functions
+
+export const message = formatMessage("Test");
+export const prefix = GREETING_PREFIX;
+`.trim();
+
+		const result = await bundleMDX({
+			source: mdxSource,
+			cwd: fixturesDir,
+			framework: "qwik",
+		});
+
+		expect(result.errors).toEqual([]);
+		expect(result.code).toContain("formatMessage");
+		expect(result.code).toContain("GREETING_PREFIX");
+	});
+
+	test("resolves JSON imports from file system", async () => {
+		const mdxSource = `
+import config from "./data/config.json";
+
+# JSON Import Test
+
+App: {config.appName}
+`.trim();
+
+		const result = await bundleMDX({
+			source: mdxSource,
+			cwd: fixturesDir,
+			framework: "qwik",
+		});
+
+		expect(result.errors).toEqual([]);
+		expect(result.code).toContain("File System Test App");
+	});
+
+	test("in-memory files take priority over file system", async () => {
+		const mdxSource = `
+import { Counter } from "./components/counter.tsx";
+
+# Priority Test
+
+<Counter />
+`.trim();
+
+		const inMemoryCounter = `
+import { component$ } from "@builder.io/qwik";
+
+export const Counter = component$(() => {
+	return <div class="in-memory-counter">In-Memory Counter Override</div>;
+});
+`.trim();
+
+		const result = await bundleMDX({
+			source: mdxSource,
+			cwd: fixturesDir,
+			files: {
+				"./components/counter.tsx": inMemoryCounter,
+			},
+			framework: "qwik",
+		});
+
+		expect(result.errors).toEqual([]);
+		expect(result.code).toContain("in-memory-counter");
+		expect(result.code).toContain("In-Memory Counter Override");
+		expect(result.code).not.toContain("count-value");
+	});
+
+	test("resolves nested file system imports from file system components", async () => {
+		const mdxSource = `
+import { MyWrapper } from "./my-wrapper.tsx";
+
+# Nested Import Test
+
+<MyWrapper />
+`.trim();
+
+		const myWrapper = `
+import { component$ } from "@builder.io/qwik";
+import { Greeting } from "./components/greeting";
+import { formatMessage } from "./utils/helpers";
+
+export const MyWrapper = component$(() => {
+	const msg = formatMessage("Nested test");
+	return (
+		<div class="my-wrapper">
+			<Greeting name="Nested" />
+			<p>{msg}</p>
+		</div>
+	);
+});
+`.trim();
+
+		const result = await bundleMDX({
+			source: mdxSource,
+			cwd: fixturesDir,
+			files: {
+				"./my-wrapper.tsx": myWrapper,
+			},
+			framework: "qwik",
+		});
+
+		expect(result.errors).toEqual([]);
+		expect(result.code).toContain("my-wrapper");
+		expect(result.code).toContain("greeting-component");
+		expect(result.code).toContain("formatMessage");
+	});
+
+	test("works with VFile source and cwd", async () => {
+		const mdxContent = `
+import { Counter } from "./components/counter";
+
+# VFile Test
+
+<Counter />
+`.trim();
+
+		const vfile = new VFile({
+			value: mdxContent,
+			path: path.join(fixturesDir, "test-doc.mdx"),
+		});
+
+		const result = await bundleMDX({
+			source: vfile,
+			framework: "qwik",
+		});
+
+		expect(result.errors).toEqual([]);
+		expect(result.code).toContain("counter-component");
+	});
+
+	test("mixed in-memory and file system imports work together", async () => {
+		const mdxSource = `
+import { Counter } from "./components/counter";
+import { CustomComponent } from "./custom.tsx";
+import config from "./data/config.json";
+
+# Mixed Imports Test
+
+<Counter />
+<CustomComponent appName={config.appName} />
+`.trim();
+
+		const customComponent = `
+import { component$ } from "@builder.io/qwik";
+import { formatMessage } from "./utils/helpers";
+
+export const CustomComponent = component$(({ appName }) => {
+	return <div class="custom-component">{formatMessage(appName)}</div>;
+});
+`.trim();
+
+		const result = await bundleMDX({
+			source: mdxSource,
+			cwd: fixturesDir,
+			files: {
+				"./custom.tsx": customComponent,
+			},
+			framework: "qwik",
+		});
+
+		expect(result.errors).toEqual([]);
+		expect(result.code).toContain("counter-component");
+		expect(result.code).toContain("File System Test App");
+		expect(result.code).toContain("custom-component");
+		expect(result.code).toContain("formatMessage");
+	});
 });
