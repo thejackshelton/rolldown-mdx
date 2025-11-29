@@ -1,5 +1,5 @@
-import mdx from "@mdx-js/rollup";
 import type { Options as MdxPluginOptions } from "@mdx-js/rollup";
+import mdx from "@mdx-js/rollup";
 import matter from "gray-matter";
 import { resolve } from "pathe";
 import remarkFrontmatter from "remark-frontmatter";
@@ -12,11 +12,11 @@ import {
 } from "rolldown";
 import { VFile } from "vfile";
 import {
+	deriveGlobals,
 	type FrameworkImport,
 	type MdxJsxConfig as FrameworkMdxJsxConfig,
-	type SupportedFramework,
-	deriveGlobals,
 	getFrameworkConfig,
+	type SupportedFramework,
 } from "./framework-config";
 import { qwikIntegration } from "./integrations/qwik";
 import { createInMemoryPlugin } from "./plugins/memory";

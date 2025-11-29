@@ -3,8 +3,8 @@ import {
 	type ImportDeclaration,
 	type ParenthesizedExpression as OxcParenthesizedExpression,
 	type Program,
-	type Statement,
 	parseSync,
+	type Statement,
 } from "oxc-parser";
 
 function processImportSpecifiers(
