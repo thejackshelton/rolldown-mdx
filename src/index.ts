@@ -214,9 +214,9 @@ export async function bundleMDX({
 	}
 	debug("[bundleMDX] Final MDX Plugin Options:", mdxOpts);
 
-	const jsxOpts: InputOptions["jsx"] = {
-		mode: "automatic",
-		jsxImportSource: activeJsxConfig?.jsxLib?.package,
+	const jsxOpts: NonNullable<InputOptions["transform"]>["jsx"] = {
+		runtime: "automatic",
+		importSource: activeJsxConfig?.jsxLib?.package,
 	};
 
 	const inMemoryPlugin = createInMemoryPlugin({
@@ -238,7 +238,7 @@ export async function bundleMDX({
 		input: entryPointId,
 		plugins: defaultPlugins,
 		external: Object.keys(mergedGlobals),
-		jsx: activeJsxConfig?.jsxLib?.package ? jsxOpts : undefined,
+		transform: activeJsxConfig?.jsxLib?.package ? { jsx: jsxOpts } : undefined,
 		...rolldownOpts,
 	};
 
