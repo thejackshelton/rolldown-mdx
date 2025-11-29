@@ -13,9 +13,9 @@
 
 import {
 	type FrameworkImport,
+	frameworkConfigs,
 	type MdxJsxConfig,
 	type SupportedFramework,
-	frameworkConfigs,
 } from "./framework-config";
 import type { BundleMDXResult } from "./index";
 

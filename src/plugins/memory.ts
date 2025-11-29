@@ -17,10 +17,7 @@ function findPathWithExt(
 ): string | null {
 	for (const ext of extensions) {
 		const pathWithExt = basePath + ext;
-		const isPathWithExtMatch = Object.prototype.hasOwnProperty.call(
-			filesMap,
-			pathWithExt,
-		);
+		const isPathWithExtMatch = Object.hasOwn(filesMap, pathWithExt);
 		if (isPathWithExtMatch) {
 			return pathWithExt;
 		}
@@ -73,7 +70,7 @@ export function createInMemoryPlugin({
 				`[inMemoryPlugin.resolveId] Resolved import path for '${id}': ${resolvedImportPath}`,
 			);
 
-			const isDirectKeyMatch = Object.prototype.hasOwnProperty.call(
+			const isDirectKeyMatch = Object.hasOwn(
 				processedFiles,
 				resolvedImportPath,
 			);
@@ -117,10 +114,7 @@ export function createInMemoryPlugin({
 				return String(vfile.value);
 			}
 
-			const isInMemoryFile = Object.prototype.hasOwnProperty.call(
-				processedFiles,
-				id,
-			);
+			const isInMemoryFile = Object.hasOwn(processedFiles, id);
 
 			if (isInMemoryFile) {
 				debug(

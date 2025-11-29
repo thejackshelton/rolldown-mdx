@@ -1,5 +1,5 @@
-import mdx from "@mdx-js/rollup";
 import type { Options as MdxPluginOptions } from "@mdx-js/rollup";
+import mdx from "@mdx-js/rollup";
 import matter from "gray-matter";
 import { resolve } from "pathe";
 import remarkFrontmatter from "remark-frontmatter";
@@ -12,11 +12,11 @@ import {
 } from "rolldown";
 import { VFile } from "vfile";
 import {
+	deriveGlobals,
 	type FrameworkImport,
 	type MdxJsxConfig as FrameworkMdxJsxConfig,
-	type SupportedFramework,
-	deriveGlobals,
 	getFrameworkConfig,
+	type SupportedFramework,
 } from "./framework-config";
 import { qwikIntegration } from "./integrations/qwik";
 import { createInMemoryPlugin } from "./plugins/memory";
@@ -214,9 +214,9 @@ export async function bundleMDX({
 	}
 	debug("[bundleMDX] Final MDX Plugin Options:", mdxOpts);
 
-	const jsxOpts: InputOptions["jsx"] = {
-		mode: "automatic",
-		jsxImportSource: activeJsxConfig?.jsxLib?.package,
+	const jsxOpts: NonNullable<InputOptions["transform"]>["jsx"] = {
+		runtime: "automatic",
+		importSource: activeJsxConfig?.jsxLib?.package,
 	};
 
 	const inMemoryPlugin = createInMemoryPlugin({
@@ -238,7 +238,7 @@ export async function bundleMDX({
 		input: entryPointId,
 		plugins: defaultPlugins,
 		external: Object.keys(mergedGlobals),
-		jsx: activeJsxConfig?.jsxLib?.package ? jsxOpts : undefined,
+		transform: activeJsxConfig?.jsxLib?.package ? { jsx: jsxOpts } : undefined,
 		...rolldownOpts,
 	};
 
