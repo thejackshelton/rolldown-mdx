@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import type { Options as MdxPluginOptions } from "@mdx-js/rollup";
 import mdx from "@mdx-js/rollup";
-import matter from "gray-matter";
+import fm from "front-matter";
 import { resolve } from "pathe";
 import remarkFrontmatter from "remark-frontmatter";
 import remarkMdxFrontmatter from "remark-mdx-frontmatter";
@@ -29,7 +29,7 @@ export { getFrameworkConfig };
 export interface BundleMDXResult {
 	code: string;
 	frontmatter: Record<string, unknown>;
-	matter: ReturnType<typeof matter>;
+	matter: { data: Record<string, unknown>; content: string };
 	errors: Error[];
 	warnings: Error[];
 	/**
@@ -220,15 +220,12 @@ export async function bundleMDX({
 		}
 	}
 
-	const originalFileSource = String(vfile.value);
+	const originalFileSource = String(vfile.value).trimStart();
 
-	const {
-		data: frontmatterData,
-		content: mdxBody,
-		...restOfMatter
-	} = matter(originalFileSource);
+	const { attributes, body: mdxBody } =
+		fm<Record<string, unknown>>(originalFileSource);
 
-	const frontmatter = frontmatterData || {};
+	const frontmatter = attributes || {};
 	debug("[bundleMDX] Extracted frontmatter:", frontmatter);
 	debug(
 		"[bundleMDX] MDX content after frontmatter (first 100 chars):",
@@ -238,7 +235,6 @@ export async function bundleMDX({
 	const mdxFileStructure = {
 		data: frontmatter,
 		content: mdxBody,
-		...restOfMatter,
 	};
 
 	let mdxOpts: MdxPluginOptions = {

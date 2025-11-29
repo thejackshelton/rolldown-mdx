@@ -103,7 +103,7 @@ export const Counter = component$(() => {
 describe("bundleMDX with Qwik", () => {
 	test("comprehensive smoke test for qwik", async () => {
 		const mdxSource = `
---- 
+---
 title: Example Qwik Post
 published: 2023-10-27
 description: This is some Qwik meta-data
@@ -159,7 +159,7 @@ export function someJsFunction() {
 }`.trim();
 
 		const anotherMdx = `
---- 
+---
 title: Another MDX for Qwik
 ---
 

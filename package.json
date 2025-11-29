@@ -67,7 +67,7 @@
 	},
 	"dependencies": {
 		"@mdx-js/rollup": "^3.1.1",
-		"gray-matter": "^4.0.3",
+		"front-matter": "^4.0.2",
 		"oxc-parser": "^0.99.0",
 		"remark-frontmatter": "^5.0.0",
 		"remark-mdx-frontmatter": "^5.2.0",
