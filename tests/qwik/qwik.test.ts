@@ -6,6 +6,100 @@ import { VFile } from "vfile";
 import { describe, expect, test } from "vitest";
 import { bundleMDX, createMDXComponent } from "../../src/index";
 
+describe("bundleMDX with file option", () => {
+	const fixturesDir = __dirname;
+
+	test("reads MDX from disk and resolves relative imports", async () => {
+		const result = await bundleMDX({
+			file: "content/test-post.mdx",
+			cwd: fixturesDir,
+			framework: "qwik",
+		});
+
+		expect(result.errors).toEqual([]);
+		expect(result.code).toContain("counter-component");
+		expect(result.code).toContain("greeting-component");
+		expect(result.frontmatter).toEqual({
+			title: "Test Post",
+			author: "Test Author",
+		});
+	});
+
+	test("works with absolute file path", async () => {
+		const absolutePath = path.join(fixturesDir, "content/test-post.mdx");
+
+		const result = await bundleMDX({
+			file: absolutePath,
+			framework: "qwik",
+		});
+
+		expect(result.errors).toEqual([]);
+		expect(result.code).toContain("counter-component");
+		expect(result.frontmatter.title).toBe("Test Post");
+	});
+
+	test("throws when both source and file are provided", async () => {
+		await expect(
+			bundleMDX({
+				source: "# Hello",
+				file: "content/test-post.mdx",
+				cwd: fixturesDir,
+				framework: "qwik",
+			}),
+		).rejects.toThrow("Cannot specify both 'source' and 'file'");
+	});
+
+	test("throws when neither source nor file are provided", async () => {
+		await expect(
+			bundleMDX({
+				framework: "qwik",
+			}),
+		).rejects.toThrow("Must specify either 'source' or 'file'");
+	});
+
+	test("throws when file doesn't exist", async () => {
+		await expect(
+			bundleMDX({
+				file: "nonexistent.mdx",
+				cwd: fixturesDir,
+				framework: "qwik",
+			}),
+		).rejects.toThrow("ENOENT");
+	});
+
+	test("resolves imports from file directory, not cwd", async () => {
+		const result = await bundleMDX({
+			file: path.join(fixturesDir, "content/test-post.mdx"),
+			cwd: process.cwd(),
+			framework: "qwik",
+		});
+
+		expect(result.errors).toEqual([]);
+		expect(result.code).toContain("counter-component");
+	});
+
+	test("works with files map alongside file option", async () => {
+		const result = await bundleMDX({
+			file: "content/test-post.mdx",
+			cwd: fixturesDir,
+			files: {
+				"./components/counter.tsx": `
+import { component$ } from "@builder.io/qwik";
+
+export const Counter = component$(() => {
+	return <div class="overridden-counter">Overridden Counter</div>;
+});
+				`.trim(),
+			},
+			framework: "qwik",
+		});
+
+		expect(result.errors).toEqual([]);
+		expect(result.code).toContain("overridden-counter");
+		expect(result.code).toContain("greeting-component");
+	});
+});
+
 describe("bundleMDX with Qwik", () => {
 	test("comprehensive smoke test for qwik", async () => {
 		const mdxSource = `
@@ -31,7 +125,7 @@ import { component$ } from '@builder.io/qwik';
 import { MySubDirComponent } from './sub/my-sub-dir';
 import { someJsFunction } from './some-js-module';
 import jsonData from './data.json';
-import clsx from 'clsx'; // Import clsx
+import clsx from 'clsx';
 
 export const MyDemo = component$(() => {
   const showSpecialClass = true;
@@ -165,7 +259,6 @@ import { component$ } from '@builder.io/qwik';
 import NonExistentNested from './non-existent-nested-import';
 
 const MyComponentInternal = component$(() => {
-  // @ts-expect-error NonExistentNested is not defined
   return <div>Hello <NonExistentNested /></div>;
 });
 export default MyComponentInternal;
@@ -236,12 +329,11 @@ import Demo from './demo.tsx'
 
 	const demoQwikTsx = `
 import { component$ } from '@builder.io/qwik';
-import { getConditionalClasses } from './classUtils'; // Renamed and changed import
+import { getConditionalClasses } from './classUtils';
 
 const MyDemoComponent = component$(() => {
   const isActive = true;
   const hasError = false;
-  // Apply classes conditionally using the utility function
   return <div class={getConditionalClasses(isActive, hasError)}>Dynamic Classes Test</div>;
 });
 
@@ -293,7 +385,7 @@ export const getConditionalClasses = (isActive: boolean, hasError: boolean): str
 test("can use a 'files' entry to override a 'node_modules' import for Qwik", async () => {
 	const myTestComponentTsx = `
 import { component$ } from '@builder.io/qwik';
-import myMockedClsx from 'clsx'; // This import will resolve to our mock in files
+import myMockedClsx from 'clsx';
 
 export const MyTestComponent = component$(() => {
   const classes = myMockedClsx('foo', { bar: true });
