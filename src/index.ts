@@ -1,4 +1,3 @@
-import { readFile } from "node:fs/promises";
 import type { Options as MdxPluginOptions } from "@mdx-js/rollup";
 import mdx from "@mdx-js/rollup";
 import fm from "front-matter";
@@ -22,6 +21,7 @@ import {
 import { qwikIntegration } from "./integrations/qwik";
 import { createInMemoryPlugin } from "./plugins/memory";
 import { createImportsTransformPlugin } from "./plugins/transform";
+import { readFile } from "./storage";
 
 export type { SupportedFramework, FrameworkImport };
 export { getFrameworkConfig };
@@ -198,7 +198,7 @@ export async function bundleMDX({
 		const absolutePath = resolve(cwd, file);
 
 		// Read file content
-		const content = await readFile(absolutePath, "utf-8");
+		const content = await readFile(absolutePath);
 
 		// Create VFile with correct path for import resolution
 		vfile = new VFile({
