@@ -10,7 +10,6 @@ export async function qwikIntegration(
 	currentPlugins: RolldownPluginOption[],
 	defaultPluginsFromBundleMDX: readonly RolldownPluginOption[],
 	debug: DebugFn,
-	cwd: string = process.cwd(),
 ): Promise<RolldownPluginOption[]> {
 	let qwikRollupFn: ((options?: object) => RolldownPluginOption) | null = null;
 
@@ -53,8 +52,6 @@ export async function qwikIntegration(
 	debug("[rolldown-mdx:qwik] Automatically adding qwikRollup plugin.");
 	const qwikPluginInstance = qwikRollupFn({
 		entryStrategy: { type: "inline" },
-		srcDir: cwd,
-		rootDir: cwd,
 	}) as RolldownPluginOption;
 
 	const defaultPluginCount = defaultPluginsFromBundleMDX.length;

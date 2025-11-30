@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
-import { dirname, extname, resolve } from "pathe";
+import { dirname, extname, isAbsolute, relative, resolve } from "pathe";
 import type { VFile } from "vfile";
 
 export interface InMemoryPluginOptions {
@@ -60,6 +60,18 @@ export function createInMemoryPlugin({
 	resolveExtensions,
 	debug,
 }: InMemoryPluginOptions) {
+	const moduleIdToAbsolutePath = new Map<string, string>();
+
+	const toModuleId = (absolutePath: string): string => {
+		const moduleId = relative(cwd, absolutePath);
+		moduleIdToAbsolutePath.set(moduleId, absolutePath);
+		return moduleId;
+	};
+
+	const toAbsolutePath = (moduleId: string): string => {
+		return moduleIdToAbsolutePath.get(moduleId) ?? resolve(cwd, moduleId);
+	};
+
 	return {
 		name: "in-memory-loader",
 		resolveId(id: string, importer?: string): string | null {
@@ -79,7 +91,11 @@ export function createInMemoryPlugin({
 				if (importer === entryPointId) {
 					baseDir = dirname(vfile.path as string);
 				} else {
-					baseDir = dirname(importer);
+					// Importer might be a relative module ID - convert to absolute for resolution
+					const absoluteImporter = isAbsolute(importer)
+						? importer
+						: toAbsolutePath(importer);
+					baseDir = dirname(absoluteImporter);
 				}
 			} else {
 				baseDir = cwd;
@@ -92,10 +108,11 @@ export function createInMemoryPlugin({
 
 			// 1. Check processedFiles (virtual file system) - direct match
 			if (Object.hasOwn(processedFiles, resolvedImportPath)) {
+				const moduleId = toModuleId(resolvedImportPath);
 				debug(
-					`[inMemoryPlugin.resolveId] Resolved '${id}' to '${resolvedImportPath}' from processedFiles (direct key match).`,
+					`[inMemoryPlugin.resolveId] Resolved '${id}' to '${moduleId}' from processedFiles (direct key match).`,
 				);
-				return resolvedImportPath;
+				return moduleId;
 			}
 
 			const importPathLacksExtension = !extname(resolvedImportPath);
@@ -108,10 +125,11 @@ export function createInMemoryPlugin({
 					processedFiles,
 				);
 				if (resolvedFullPath) {
+					const moduleId = toModuleId(resolvedFullPath);
 					debug(
-						`[inMemoryPlugin.resolveId] Resolved '${id}' to '${resolvedFullPath}' from processedFiles (added extension).`,
+						`[inMemoryPlugin.resolveId] Resolved '${id}' to '${moduleId}' from processedFiles (added extension).`,
 					);
-					return resolvedFullPath;
+					return moduleId;
 				}
 			}
 
@@ -121,10 +139,11 @@ export function createInMemoryPlugin({
 				importPathLacksExtension ? resolveExtensions : [],
 			);
 			if (fsPath) {
+				const moduleId = toModuleId(fsPath);
 				debug(
-					`[inMemoryPlugin.resolveId] Resolved '${id}' to '${fsPath}' from file system.`,
+					`[inMemoryPlugin.resolveId] Resolved '${id}' to '${moduleId}' from file system.`,
 				);
-				return fsPath;
+				return moduleId;
 			}
 
 			debug(
@@ -143,17 +162,17 @@ export function createInMemoryPlugin({
 				return String(vfile.value);
 			}
 
-			// 2. Check processedFiles (virtual file system)
-			if (Object.hasOwn(processedFiles, id)) {
+			const absolutePath = toAbsolutePath(id);
+
+			if (Object.hasOwn(processedFiles, absolutePath)) {
 				debug(
-					`[inMemoryPlugin.load] Loading content for in-memory file '${id}' from processedFiles`,
+					`[inMemoryPlugin.load] Loading content for '${id}' from processedFiles`,
 				);
-				return processedFiles[id];
+				return processedFiles[absolutePath];
 			}
 
-			// 3. Fall back to file system (what esbuild does automatically for mdx-bundler)
-			if (existsSync(id)) {
-				const content = readFileSync(id, "utf-8");
+			if (existsSync(absolutePath)) {
+				const content = readFileSync(absolutePath, "utf-8");
 				debug(
 					`[inMemoryPlugin.load] Loading content for '${id}' from file system`,
 				);

@@ -306,7 +306,6 @@ export async function bundleMDX({
 			inputOpts.plugins as RolldownPluginOption[],
 			defaultPlugins,
 			debug,
-			cwd,
 		);
 	}
 
