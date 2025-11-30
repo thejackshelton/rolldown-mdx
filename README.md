@@ -194,38 +194,20 @@ const result = await bundleMDX({
 });
 ```
 
-### Runtime Agnostic
+### Multi-Runtime Support
 
-Unlike other MDX bundlers that are locked to Node.js, rolldown-mdx runs **everywhere**:
+No native dependencies — bundle on Node.js, Deno, or Bun:
 
-| Runtime | `source` option | `file` option |
-|---------|-----------------|---------------|
+| Runtime | `bundleMDX()` | `createMDXComponent()` |
+|---------|---------------|------------------------|
 | **Node.js** | ✅ | ✅ |
 | **Deno** | ✅ | ✅ |
 | **Bun** | ✅ | ✅ |
-| **Cloudflare Workers** | ✅ | — |
-| **Vercel Edge** | ✅ | — |
-| **Browser** | ✅ | — |
+| **Cloudflare Workers** | — | ✅ |
+| **Vercel Edge** | — | ✅ |
+| **Browser** | — | ✅ |
 
-The `source` option works universally. The `file` option (reading from disk) works in runtimes with filesystem access.
-
-#### Edge Runtimes (Cloudflare Workers, Vercel Edge, etc.)
-
-```js
-export default {
-  async fetch(request, env) {
-    // Example Fetch MDX from KV, R2, or anywhere
-    const mdxContent = await env.MY_KV.get('posts/hello.mdx');
-    
-    const result = await bundleMDX({
-      source: mdxContent,
-      framework: 'qwik'
-    });
-    
-    return new Response(result.code);
-  }
-}
-```
+Bundle wherever you want, render the result anywhere.
 
 ## License
 
