@@ -24,6 +24,13 @@ The **framework-agnostic**, **runtime-agnostic** MDX bundler powered by [rolldow
 - 🛠️ **Framework Optimizations** - Hook directly into your framework's compiler during bundling (Qwik, Solid, etc.)
 - 📦 **Full MDX Ecosystem** - Compatible with all your favorite remark and rehype plugins
 
+## Example Use Cases
+
+- **MDX stored in a database or CMS** — compile on-demand, whenever you need it
+- **MDX with component imports** — bundle `import { Chart } from './Chart'` automatically
+- **Git-based content** — read MDX files from disk with automatic import resolution
+- **Multi-framework content** — same MDX source, render with React, Qwik, Solid, etc.
+
 ## Installation
 
 ```bash
