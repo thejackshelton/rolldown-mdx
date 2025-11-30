@@ -50,19 +50,12 @@ export async function qwikIntegration(
 		return currentPlugins;
 	}
 
-	const qwikOptions = {
-		target: "lib" as const,
-		buildMode: "production" as const,
-		entryStrategy: { type: "inline" as const },
+	debug("[rolldown-mdx:qwik] Automatically adding qwikRollup plugin.");
+	const qwikPluginInstance = qwikRollupFn({
+		entryStrategy: { type: "inline" },
 		srcDir: cwd,
 		rootDir: cwd,
-	};
-
-	debug(
-		"[rolldown-mdx:qwik] Automatically adding qwikRollup plugin with options:",
-		qwikOptions,
-	);
-	const qwikPluginInstance = qwikRollupFn(qwikOptions) as RolldownPluginOption;
+	}) as RolldownPluginOption;
 
 	const defaultPluginCount = defaultPluginsFromBundleMDX.length;
 	const head = currentPlugins.slice(0, defaultPluginCount);
