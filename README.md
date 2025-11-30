@@ -13,7 +13,7 @@ The **framework-agnostic**, **runtime-agnostic** MDX bundler powered by [rolldow
 [license-badge]: https://img.shields.io/github/license/thejackshelton/rolldown-mdx?color=blue
 [license]: https://github.com/thejackshelton/rolldown-mdx/blob/main/LICENSE
 
-> Bundle MDX anywhere: Node.js, Deno, Bun, Cloudflare Workers, Vercel Edge, or the browser. Works with Qwik, React, Solid, Vue, Hono, Brisa, or any JSX-based framework.
+> Bundle on Node.js, Deno, or Bun — render anywhere. Works with Qwik, React, Solid, Vue, Hono, Brisa, or any JSX-based framework.
 
 ## Why rolldown-mdx?
 
