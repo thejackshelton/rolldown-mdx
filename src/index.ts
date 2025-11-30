@@ -1,6 +1,6 @@
 import type { Options as MdxPluginOptions } from "@mdx-js/rollup";
 import mdx from "@mdx-js/rollup";
-import matter from "gray-matter";
+import fm from "front-matter";
 import { resolve } from "pathe";
 import remarkFrontmatter from "remark-frontmatter";
 import remarkMdxFrontmatter from "remark-mdx-frontmatter";
@@ -21,6 +21,7 @@ import {
 import { qwikIntegration } from "./integrations/qwik";
 import { createInMemoryPlugin } from "./plugins/memory";
 import { createImportsTransformPlugin } from "./plugins/transform";
+import { readFile } from "./storage";
 
 export type { SupportedFramework, FrameworkImport };
 export { getFrameworkConfig };
@@ -28,7 +29,7 @@ export { getFrameworkConfig };
 export interface BundleMDXResult {
 	code: string;
 	frontmatter: Record<string, unknown>;
-	matter: ReturnType<typeof matter>;
+	matter: { data: Record<string, unknown>; content: string };
 	errors: Error[];
 	warnings: Error[];
 	/**
@@ -67,7 +68,17 @@ export interface MdxJsxConfig {
 }
 
 export interface BundleMDXOptions {
-	source: string | VFile;
+	/**
+	 * MDX content as a string or VFile.
+	 * Mutually exclusive with `file`.
+	 */
+	source?: string | VFile;
+	/**
+	 * Path to an MDX file on disk.
+	 * The file will be read and relative imports will resolve from its directory.
+	 * Mutually exclusive with `source`.
+	 */
+	file?: string;
 	files?: Record<string, string>;
 	cwd?: string;
 	mdx?: (
@@ -90,6 +101,7 @@ export interface BundleMDXOptions {
 
 export async function bundleMDX({
 	source,
+	file,
 	files = {},
 	cwd = process.cwd(),
 	mdx: mdxOptionsFn,
@@ -101,6 +113,16 @@ export async function bundleMDX({
 	rolldown: rolldownOpts = {},
 	output: outputOpts = {},
 }: BundleMDXOptions): Promise<BundleMDXResult> {
+	// Validation: source and file are mutually exclusive
+	if (source && file) {
+		throw new Error(
+			"Cannot specify both 'source' and 'file'. Use one or the other.",
+		);
+	}
+	if (!source && !file) {
+		throw new Error("Must specify either 'source' or 'file'.");
+	}
+
 	const debug = (...args: unknown[]) => {
 		if (isDebugMode) {
 			console.log(...args);
@@ -129,7 +151,11 @@ export async function bundleMDX({
 	}
 
 	debug("[bundleMDX] Initial options:", {
-		source: typeof source === "string" ? "string" : "VFile",
+		source: file
+			? `file:${file}`
+			: typeof source === "string"
+				? "string"
+				: "VFile",
 		files: Object.keys(files),
 		cwd,
 		hasMdxOptionsFn: !!mdxOptionsFn,
@@ -149,12 +175,14 @@ export async function bundleMDX({
 	}
 	debug("[bundleMDX] Processed files map (keys):", Object.keys(processedFiles));
 
-	if (typeof source === "string") {
+	if (file) {
+		debug("[bundleMDX] File path:", file);
+	} else if (typeof source === "string") {
 		debug(
 			"[bundleMDX] Source string (first 100 chars):",
 			source.substring(0, 100),
 		);
-	} else {
+	} else if (source) {
 		debug("[bundleMDX] Source VFile path:", source.path);
 		debug(
 			"[bundleMDX] Source VFile value (first 100 chars):",
@@ -165,27 +193,39 @@ export async function bundleMDX({
 	const entryPointId = "entry.mdx";
 	let vfile: VFile;
 
-	if (typeof source === "string") {
+	if (file) {
+		// Resolve to absolute path
+		const absolutePath = resolve(cwd, file);
+
+		// Read file content
+		const content = await readFile(absolutePath);
+
+		// Create VFile with correct path for import resolution
+		vfile = new VFile({
+			value: content,
+			path: absolutePath,
+		});
+
+		debug("[bundleMDX] Read file from disk:", absolutePath);
+	} else if (typeof source === "string") {
 		vfile = new VFile({
 			value: source,
 			path: resolve(cwd, "source.mdx"),
 		});
 	} else {
-		vfile = source;
+		// source is already a VFile
+		vfile = source as VFile;
 		if (!vfile.path) {
 			vfile.path = resolve(cwd, "source.mdx");
 		}
 	}
 
-	const originalFileSource = String(vfile.value);
+	const originalFileSource = String(vfile.value).trimStart();
 
-	const {
-		data: frontmatterData,
-		content: mdxBody,
-		...restOfMatter
-	} = matter(originalFileSource);
+	const { attributes, body: mdxBody } =
+		fm<Record<string, unknown>>(originalFileSource);
 
-	const frontmatter = frontmatterData || {};
+	const frontmatter = attributes || {};
 	debug("[bundleMDX] Extracted frontmatter:", frontmatter);
 	debug(
 		"[bundleMDX] MDX content after frontmatter (first 100 chars):",
@@ -195,7 +235,6 @@ export async function bundleMDX({
 	const mdxFileStructure = {
 		data: frontmatter,
 		content: mdxBody,
-		...restOfMatter,
 	};
 
 	let mdxOpts: MdxPluginOptions = {

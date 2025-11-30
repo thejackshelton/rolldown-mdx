@@ -57,7 +57,6 @@
 		"astring": "^1.9.0",
 		"bumpp": "^10.3.0",
 		"clsx": "^2.1.1",
-		"pathe": "^2.0.3",
 		"tsdown": "0.17.0-beta.3",
 		"typescript": "^5.8.3",
 		"vitest": "^4.0.14"
@@ -67,11 +66,13 @@
 	},
 	"dependencies": {
 		"@mdx-js/rollup": "^3.1.1",
-		"gray-matter": "^4.0.3",
+		"front-matter": "^4.0.2",
 		"oxc-parser": "^0.99.0",
+		"pathe": "^2.0.3",
 		"remark-frontmatter": "^5.0.0",
 		"remark-mdx-frontmatter": "^5.2.0",
 		"rolldown": "1.0.0-beta.52",
+		"unstorage": "^1.17",
 		"vfile": "^6.0.3"
 	}
 }

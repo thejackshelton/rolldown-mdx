@@ -1,14 +1,17 @@
 # rolldown-mdx
 
-The framework-agnostic MDX bundler powered by [rolldown](https://github.com/rolldown/rolldown).
+The **framework-agnostic**, **runtime-agnostic** MDX bundler powered by [rolldown](https://github.com/rolldown/rolldown).
+
+> Bundle MDX anywhere: Node.js, Deno, Bun, Cloudflare Workers, Vercel Edge, or the browser.
 
 ## Why rolldown-mdx?
 
 **rolldown-mdx** is the ultimate solution for bundling MDX content in modern JavaScript applications:
 
-- **Framework Agnostic** - Works with Qwik, Vue, React, Solid, Hono, Brisa, or any JSX-based framework - just provide `framework` option or custom JSX configuration.
-- **Auto-Detect Frameworks** - Automatically configures for your framework with a single line of code
+- **Runtime Agnostic** - Runs everywhere: Node.js, Deno, Bun, and edge runtimes. No Node.js-specific APIs holding you back.
+- **Framework Agnostic** - Works with Qwik, Vue, React, Solid, Hono, Brisa, or any JSX-based framework.
 - **Lightning Fast** - Achieves performance comparable to esbuild and mdx-bundler through rolldown's Rust core
+- **Zero Node.js Lock-in** - Built on [unstorage](https://github.com/unjs/unstorage) and other UnJS primitives for true portability
 - **Extensible Pipeline** - Leverage rolldown's powerful plugin API for complete control over the transformation process
 - **Framework Optimizations** - Hook directly into your framework's compiler during bundling (Qwik, Solid, etc.)
 - **Full MDX Ecosystem** - Compatible with all your favorite MDX plugins and transformations
@@ -165,6 +168,62 @@ const Component = createMDXComponent(result, React);
 
 // Render it
 <Component />
+```
+
+### File Option
+
+Read MDX directly from disk with automatic import resolution:
+
+```js
+// Relative imports in the MDX file resolve from its directory
+const result = await bundleMDX({
+  file: 'content/posts/hello-world.mdx',
+  framework: 'react'
+});
+```
+
+This is equivalent to manually reading the file and setting `cwd`:
+
+```js
+// The verbose way (file option does this for you)
+const result = await bundleMDX({
+  source: fs.readFileSync('content/posts/hello-world.mdx', 'utf-8'),
+  cwd: path.resolve('content/posts'),
+  framework: 'react'
+});
+```
+
+### Runtime Agnostic
+
+Unlike other MDX bundlers that are locked to Node.js, rolldown-mdx runs **everywhere**:
+
+| Runtime | `source` option | `file` option |
+|---------|-----------------|---------------|
+| **Node.js** | ✅ | ✅ |
+| **Deno** | ✅ | ✅ |
+| **Bun** | ✅ | ✅ |
+| **Cloudflare Workers** | ✅ | — |
+| **Vercel Edge** | ✅ | — |
+| **Browser** | ✅ | — |
+
+The `source` option works universally. The `file` option (reading from disk) works in runtimes with filesystem access.
+
+#### Edge Runtimes (Cloudflare Workers, Vercel Edge, etc.)
+
+```js
+export default {
+  async fetch(request, env) {
+    // Example Fetch MDX from KV, R2, or anywhere
+    const mdxContent = await env.MY_KV.get('posts/hello.mdx');
+    
+    const result = await bundleMDX({
+      source: mdxContent,
+      framework: 'qwik'
+    });
+    
+    return new Response(result.code);
+  }
+}
 ```
 
 ## License
