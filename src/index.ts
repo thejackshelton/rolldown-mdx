@@ -302,11 +302,12 @@ export async function bundleMDX({
 	}
 
 	if (framework === "qwik") {
-		inputOpts.plugins = await qwikIntegration(
-			inputOpts.plugins as RolldownPluginOption[],
+		inputOpts.plugins = await qwikIntegration({
+			currentPlugins: inputOpts.plugins as RolldownPluginOption[],
 			defaultPlugins,
+			cwd,
 			debug,
-		);
+		});
 	}
 
 	debug(
@@ -389,7 +390,7 @@ export async function bundleMDX({
 import { createMDXComponent } from 'rolldown-mdx';
 import * as ${activeJsxConfig.jsxLib?.varName || "Framework"} from '${activeJsxConfig.jsxLib?.package || framework}';
 
-// Framework is auto-detected!
+// Framework is detected from the bundler result!
 const Component = createMDXComponent(result, ${activeJsxConfig.jsxLib?.varName || "Framework"});
 `,
 		};

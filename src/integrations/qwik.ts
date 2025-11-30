@@ -2,15 +2,23 @@ import type { RolldownPluginOption } from "rolldown";
 
 type DebugFn = (...args: unknown[]) => void;
 
+export interface QwikIntegrationOptions {
+	currentPlugins: RolldownPluginOption[];
+	defaultPlugins: readonly RolldownPluginOption[];
+	cwd: string;
+	debug: DebugFn;
+}
+
 /**
  * This integration adds the Qwik compiler out of the box, so that
  * consumers that select the qwik option don't have to add it themselves.
  */
-export async function qwikIntegration(
-	currentPlugins: RolldownPluginOption[],
-	defaultPluginsFromBundleMDX: readonly RolldownPluginOption[],
-	debug: DebugFn,
-): Promise<RolldownPluginOption[]> {
+export async function qwikIntegration({
+	currentPlugins,
+	defaultPlugins,
+	cwd,
+	debug,
+}: QwikIntegrationOptions): Promise<RolldownPluginOption[]> {
 	let qwikRollupFn: ((options?: object) => RolldownPluginOption) | null = null;
 
 	try {
@@ -51,10 +59,11 @@ export async function qwikIntegration(
 
 	debug("[rolldown-mdx:qwik] Automatically adding qwikRollup plugin.");
 	const qwikPluginInstance = qwikRollupFn({
+		srcDir: cwd,
 		entryStrategy: { type: "inline" },
 	}) as RolldownPluginOption;
 
-	const defaultPluginCount = defaultPluginsFromBundleMDX.length;
+	const defaultPluginCount = defaultPlugins.length;
 	const head = currentPlugins.slice(0, defaultPluginCount);
 	const tail = currentPlugins.slice(defaultPluginCount);
 

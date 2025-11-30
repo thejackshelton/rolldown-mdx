@@ -63,10 +63,10 @@ Create MDX components for your framework with minimal code:
 import { createMDXComponent } from 'rolldown-mdx';
 import * as React from 'react';
 
-// Easy component creation - just pass the result and framework
+// Easy component creation - just pass the result and your framework's module
 const Component = createMDXComponent(result, React);
 
-// Framework is auto-detected from the import!
+// Framework is detected from the bundler result!
 ```
 
 ### Typed for Your Framework
