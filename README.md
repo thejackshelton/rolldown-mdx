@@ -1,6 +1,17 @@
 # rolldown-mdx
 
+[![npm][npm-badge]][npm]
+[![CI][build-badge]][build]
+[![license][license-badge]][license]
+
 The **framework-agnostic**, **runtime-agnostic** MDX bundler powered by [rolldown](https://github.com/rolldown/rolldown).
+
+[npm-badge]: https://img.shields.io/npm/v/rolldown-mdx?logo=npm&color=a855f7
+[npm]: https://www.npmjs.com/package/rolldown-mdx
+[build-badge]: https://img.shields.io/github/actions/workflow/status/thejackshelton/rolldown-mdx/unit-test.yml?branch=main&logo=github&label=CI
+[build]: https://github.com/thejackshelton/rolldown-mdx/actions
+[license-badge]: https://img.shields.io/github/license/thejackshelton/rolldown-mdx?color=blue
+[license]: https://github.com/thejackshelton/rolldown-mdx/blob/main/LICENSE
 
 > Bundle MDX anywhere: Node.js, Deno, Bun, Cloudflare Workers, Vercel Edge, or the browser. Works with Qwik, React, Solid, Vue, Hono, Brisa, or any JSX-based framework.
 
