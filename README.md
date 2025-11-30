@@ -18,11 +18,18 @@ The **framework-agnostic**, **runtime-agnostic** MDX bundler powered by [rolldow
 ## Why rolldown-mdx?
 
 - ⚡ **Lightning Fast** - Performance comparable to esbuild through rolldown's Rust core
-- 🔓 **Zero Lock-in** - Built on [unstorage](https://github.com/unjs/unstorage) and UnJS primitives for true portability
+- 🔓 **Zero Lock-in** - Native runtime APIs for Node.js, Deno, and Bun — no compatibility layers
 - 🔄 **Easy Migration** - API compatible with [mdx-bundler](https://github.com/kentcdodds/mdx-bundler) — swap `esbuildOptions` for `rolldown` and you're done
 - 🔌 **Extensible Pipeline** - Leverage rolldown's plugin API for complete control over transformations
 - 🛠️ **Framework Optimizations** - Hook directly into your framework's compiler during bundling (Qwik, Solid, etc.)
 - 📦 **Full MDX Ecosystem** - Compatible with all your favorite remark and rehype plugins
+
+## Example Use Cases
+
+- **MDX stored in a database or CMS** — compile on-demand, whenever you need it
+- **MDX with component imports** — bundle `import { Chart } from './Chart'` automatically
+- **Git-based content** — read MDX files from disk with automatic import resolution
+- **Multi-framework content** — same MDX source, render with React, Qwik, Solid, etc.
 
 ## Installation
 
