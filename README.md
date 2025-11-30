@@ -17,12 +17,12 @@ The **framework-agnostic**, **runtime-agnostic** MDX bundler powered by [rolldow
 
 ## Why rolldown-mdx?
 
-- **Lightning Fast** - Performance comparable to esbuild through rolldown's Rust core
-- **Zero Lock-in** - Built on [unstorage](https://github.com/unjs/unstorage) and UnJS primitives for true portability
-- **Easy Migration** - API compatible with [mdx-bundler](https://github.com/kentcdodds/mdx-bundler) — swap `esbuildOptions` for `rolldown` and you're done
-- **Extensible Pipeline** - Leverage rolldown's plugin API for complete control over transformations
-- **Framework Optimizations** - Hook directly into your framework's compiler during bundling (Qwik, Solid, etc.)
-- **Full MDX Ecosystem** - Compatible with all your favorite remark and rehype plugins
+- ⚡ **Lightning Fast** - Performance comparable to esbuild through rolldown's Rust core
+- 🔓 **Zero Lock-in** - Built on [unstorage](https://github.com/unjs/unstorage) and UnJS primitives for true portability
+- 🔄 **Easy Migration** - API compatible with [mdx-bundler](https://github.com/kentcdodds/mdx-bundler) — swap `esbuildOptions` for `rolldown` and you're done
+- 🔌 **Extensible Pipeline** - Leverage rolldown's plugin API for complete control over transformations
+- 🛠️ **Framework Optimizations** - Hook directly into your framework's compiler during bundling (Qwik, Solid, etc.)
+- 📦 **Full MDX Ecosystem** - Compatible with all your favorite remark and rehype plugins
 
 ## Installation
 
@@ -30,7 +30,7 @@ The **framework-agnostic**, **runtime-agnostic** MDX bundler powered by [rolldow
 npm install rolldown-mdx
 ```
 
-## Quick Start
+## Quick Start 🚀
 
 ```js
 import { bundleMDX, createMDXComponent } from 'rolldown-mdx';
@@ -129,16 +129,15 @@ const ReactComponent = createMDXComponent<React.ComponentProps<'div'>, React.Rea
 
 This flexible typing system means you get proper type checking and autocomplete that matches your specific framework.
 
-### Powerful Plugin Ecosystem
+### Remark & Rehype Plugins
 
-Easily extend your MDX processing pipeline with remark and rehype plugins:
+Extend your MDX processing with the full remark/rehype ecosystem:
 
 ```js
 const result = await bundleMDX({
   source: mdxSource,
   framework: 'react',
   mdx: (options) => {
-
     options.remarkPlugins = [
       ...(options.remarkPlugins ?? []),
       remarkGfm,
@@ -155,9 +154,9 @@ const result = await bundleMDX({
 });
 ```
 
-### Extensible Plugin System
+### Rollup or Rolldown Plugins
 
-Add framework compilers, custom transformations, or any Rollup-compatible plugin:
+Add framework compilers, custom transforms, or any Rollup-compatible plugin:
 
 ```js
 import { myCustomPlugin } from 'my-plugin';
@@ -173,28 +172,17 @@ const result = await bundleMDX({
 
 ### File Option
 
-Read MDX directly from disk with automatic import resolution:
+Read MDX from disk — imports in your MDX (like `import Counter from './Counter'`) resolve automatically:
 
 ```js
-// Relative imports in the MDX file resolve from its directory
 const result = await bundleMDX({
   file: 'content/posts/hello-world.mdx',
   framework: 'react'
 });
+// No extra config needed — Counter.tsx is bundled automatically
 ```
 
-This is equivalent to manually reading the file and setting `cwd`:
-
-```js
-// The verbose way (file option does this for you)
-const result = await bundleMDX({
-  source: fs.readFileSync('content/posts/hello-world.mdx', 'utf-8'),
-  cwd: path.resolve('content/posts'),
-  framework: 'react'
-});
-```
-
-### Multi-Runtime Support
+### Multi-Runtime Support 🌍
 
 No native dependencies — bundle on Node.js, Deno, or Bun:
 
