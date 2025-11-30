@@ -302,10 +302,11 @@ export async function bundleMDX({
 	}
 
 	if (framework === "qwik") {
-		inputOpts.plugins = await qwikIntegration(
+		inputOpts.plugins = qwikIntegration(
 			inputOpts.plugins as RolldownPluginOption[],
 			defaultPlugins,
 			debug,
+			{ cwd },
 		);
 	}
 
