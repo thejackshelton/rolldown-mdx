@@ -16,6 +16,28 @@ The **framework-agnostic**, **runtime-agnostic** MDX bundler powered by [rolldow
 - **Framework Optimizations** - Hook directly into your framework's compiler during bundling (Qwik, Solid, etc.)
 - **Full MDX Ecosystem** - Compatible with all your favorite MDX plugins and transformations
 
+## Inspiration
+
+This project stands on the shoulders of giants:
+
+- **[mdx-bundler](https://github.com/kentcdodds/mdx-bundler)** - Kent C. Dodds' excellent MDX bundler provided the intuitive API design we loved. However, esbuild's limited plugin ecosystem and WASM constraints made it difficult to integrate framework-specific compilers (like Qwik's optimizer) and run in all JavaScript runtimes.
+
+- **[unstorage](https://github.com/unjs/unstorage)** and the **[UnJS](https://github.com/unjs)** ecosystem - The philosophy of building runtime-agnostic JavaScript tools directly influenced our approach. We use UnJS primitives like [pathe](https://github.com/unjs/pathe) for cross-platform path handling.
+
+- **[Rolldown](https://github.com/rolldown/rolldown)** - The Rust-powered bundler that makes this all possible.
+
+## Why Rolldown?
+
+[Rolldown](https://rolldown.rs) is a Rust-based JavaScript bundler designed to serve as the future bundler for Vite. Here's why it's perfect for MDX bundling:
+
+- **Performance** - Written in Rust, Rolldown matches esbuild's speed while being 10-30x faster than Rollup. Its WASM build is also significantly faster than esbuild's (due to Go's sub-optimal WASM compilation).
+
+- **Ecosystem Compatibility** - Rolldown supports the same plugin API as Rollup/Vite, giving us access to the entire Vite plugin ecosystem. This means framework compilers like `@builder.io/qwik/optimizer` work out of the box.
+
+- **Better Chunking Control** - Rolldown provides fine-grained control over code splitting and chunk generation that esbuild doesn't offer, which is essential for framework-specific optimizations.
+
+- **Universal Runtime Support** - Rolldown's architecture enables true cross-runtime compatibility without the Node.js-specific limitations we hit with esbuild.
+
 ## Features
 
 ### Simplified Framework Integration

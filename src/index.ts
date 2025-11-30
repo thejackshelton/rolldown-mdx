@@ -1,7 +1,7 @@
 import type { Options as MdxPluginOptions } from "@mdx-js/rollup";
 import mdx from "@mdx-js/rollup";
 import fm from "front-matter";
-import { resolve } from "pathe";
+import { isAbsolute, relative, resolve } from "pathe";
 import remarkFrontmatter from "remark-frontmatter";
 import remarkMdxFrontmatter from "remark-mdx-frontmatter";
 import {
@@ -168,10 +168,14 @@ export async function bundleMDX({
 		outputOpts,
 	});
 
+	// Store files with relative paths (relative to cwd)
+	// This ensures Qwik's optimizer sees relative paths instead of absolute filesystem paths
 	const processedFiles: Record<string, string> = {};
 	for (const [key, value] of Object.entries(files)) {
+		// Resolve to absolute then back to relative to normalize the path
 		const absoluteKey = resolve(cwd, key);
-		processedFiles[absoluteKey] = value;
+		const relativeKey = relative(cwd, absoluteKey);
+		processedFiles[relativeKey] = value;
 	}
 	debug("[bundleMDX] Processed files map (keys):", Object.keys(processedFiles));
 
@@ -194,29 +198,40 @@ export async function bundleMDX({
 	let vfile: VFile;
 
 	if (file) {
-		// Resolve to absolute path
+		// Resolve to absolute path for reading
 		const absolutePath = resolve(cwd, file);
+		// Use relative path for VFile to ensure Qwik sees relative paths
+		const relativePath = relative(cwd, absolutePath);
 
 		// Read file content
 		const content = await readFile(absolutePath);
 
-		// Create VFile with correct path for import resolution
+		// Create VFile with relative path for import resolution
+		// This ensures Qwik's optimizer sees relative paths instead of absolute filesystem paths
 		vfile = new VFile({
 			value: content,
-			path: absolutePath,
+			path: relativePath,
 		});
 
-		debug("[bundleMDX] Read file from disk:", absolutePath);
+		debug(
+			"[bundleMDX] Read file from disk:",
+			absolutePath,
+			"-> relative:",
+			relativePath,
+		);
 	} else if (typeof source === "string") {
 		vfile = new VFile({
 			value: source,
-			path: resolve(cwd, "source.mdx"),
+			path: "source.mdx", // Already relative
 		});
 	} else {
 		// source is already a VFile
 		vfile = source as VFile;
 		if (!vfile.path) {
-			vfile.path = resolve(cwd, "source.mdx");
+			vfile.path = "source.mdx";
+		} else if (isAbsolute(vfile.path)) {
+			// Normalize existing VFile paths to relative
+			vfile.path = relative(cwd, vfile.path);
 		}
 	}
 

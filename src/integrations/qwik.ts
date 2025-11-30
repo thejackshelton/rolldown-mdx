@@ -58,8 +58,10 @@ export async function qwikIntegration({
 	}
 
 	debug("[rolldown-mdx:qwik] Automatically adding qwikRollup plugin.");
+	// Use process.cwd() for srcDir to match the module IDs we return
+	// (which are relative to process.cwd() for Qwik compatibility)
 	const qwikPluginInstance = qwikRollupFn({
-		srcDir: cwd,
+		srcDir: process.cwd(),
 		entryStrategy: { type: "inline" },
 	}) as RolldownPluginOption;
 

@@ -9,6 +9,33 @@ import { bundleMDX, createMDXComponent } from "../../src/index";
 describe("bundleMDX with file option", () => {
 	const fixturesDir = __dirname;
 
+	test("Qwik file paths are resolved correctly relative to cwd", async () => {
+		const result = await bundleMDX({
+			file: "content/test-post.mdx",
+			cwd: fixturesDir,
+			framework: "qwik",
+		});
+
+		expect(result.errors).toEqual([]);
+		expect(result.code).toContain("counter-component");
+
+		// Qwik always produces absolute paths in QRL metadata, but they should
+		// point to the correct file locations. Before the fix, paths would be
+		// incorrect (e.g., /project/components/counter.tsx instead of
+		// /project/tests/qwik/components/counter.tsx)
+
+		// Verify paths include the correct directory structure (tests/qwik)
+		// This ensures imports from the MDX file resolve correctly relative to cwd
+		expect(result.code).toMatch(/tests\/qwik\/components\/counter\.tsx/);
+		expect(result.code).toMatch(/tests\/qwik\/components\/greeting\.tsx/);
+
+		// Ensure no malformed paths (paths that skip the cwd directory)
+		// The bug was that paths resolved relative to process.cwd() instead of cwd
+		expect(result.code).not.toMatch(
+			/file:\s*["'][^"']*\/rolldown-mdx\/components\//,
+		);
+	});
+
 	test("reads MDX from disk and resolves relative imports", async () => {
 		const result = await bundleMDX({
 			file: "content/test-post.mdx",
