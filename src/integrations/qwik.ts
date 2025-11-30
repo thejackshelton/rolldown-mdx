@@ -10,6 +10,7 @@ export async function qwikIntegration(
 	currentPlugins: RolldownPluginOption[],
 	defaultPluginsFromBundleMDX: readonly RolldownPluginOption[],
 	debug: DebugFn,
+	cwd: string = process.cwd(),
 ): Promise<RolldownPluginOption[]> {
 	let qwikRollupFn: ((options?: object) => RolldownPluginOption) | null = null;
 
@@ -49,10 +50,19 @@ export async function qwikIntegration(
 		return currentPlugins;
 	}
 
-	debug("[rolldown-mdx:qwik] Automatically adding qwikRollup plugin.");
-	const qwikPluginInstance = qwikRollupFn({
-		entryStrategy: { type: "inline" },
-	}) as RolldownPluginOption;
+	const qwikOptions = {
+		target: "lib" as const,
+		buildMode: "production" as const,
+		entryStrategy: { type: "inline" as const },
+		srcDir: cwd,
+		rootDir: cwd,
+	};
+
+	debug(
+		"[rolldown-mdx:qwik] Automatically adding qwikRollup plugin with options:",
+		qwikOptions,
+	);
+	const qwikPluginInstance = qwikRollupFn(qwikOptions) as RolldownPluginOption;
 
 	const defaultPluginCount = defaultPluginsFromBundleMDX.length;
 	const head = currentPlugins.slice(0, defaultPluginCount);
