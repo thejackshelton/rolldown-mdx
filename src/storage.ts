@@ -1,17 +1,40 @@
-import { createStorage } from "unstorage";
+import { normalize, parse } from "pathe";
+import { createStorage, type Storage } from "unstorage";
 import fsLiteDriver from "unstorage/drivers/fs-lite";
 
-const storage = createStorage({
-	driver: fsLiteDriver({ base: "/" }),
-});
+const storageCache = new Map<string, Storage>();
+
+function getOrCreateStorage(base: string): Storage {
+	let storage = storageCache.get(base);
+	if (!storage) {
+		storage = createStorage({
+			driver: fsLiteDriver({ base }),
+		});
+		storageCache.set(base, storage);
+	}
+	return storage;
+}
+
+function getStorageForPath(absolutePath: string): {
+	storage: Storage;
+	key: string;
+} {
+	const normalized = normalize(absolutePath);
+	const { root } = parse(normalized);
+
+	// root is "/" on Unix, "D:/" on Windows
+	const base = root || ".";
+	const key = normalized.slice(root.length);
+
+	return { storage: getOrCreateStorage(base), key };
+}
 
 /**
  * Read a file from disk.
  * Works in Node.js, Deno, and Bun.
  */
 export async function readFile(path: string): Promise<string> {
-	// Remove leading slash for unstorage key format
-	const key = path.startsWith("/") ? path.slice(1) : path;
+	const { storage, key } = getStorageForPath(path);
 	const content = await storage.getItem(key);
 
 	if (content === null || content === undefined) {
