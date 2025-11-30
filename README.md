@@ -18,7 +18,7 @@ The **framework-agnostic**, **runtime-agnostic** MDX bundler powered by [rolldow
 ## Why rolldown-mdx?
 
 - ⚡ **Lightning Fast** - Performance comparable to esbuild through rolldown's Rust core
-- 🔓 **Zero Lock-in** - Built on [unstorage](https://github.com/unjs/unstorage) and UnJS primitives for true portability
+- 🔓 **Zero Lock-in** - Native runtime APIs for Node.js, Deno, and Bun — no compatibility layers
 - 🔄 **Easy Migration** - API compatible with [mdx-bundler](https://github.com/kentcdodds/mdx-bundler) — swap `esbuildOptions` for `rolldown` and you're done
 - 🔌 **Extensible Pipeline** - Leverage rolldown's plugin API for complete control over transformations
 - 🛠️ **Framework Optimizations** - Hook directly into your framework's compiler during bundling (Qwik, Solid, etc.)
