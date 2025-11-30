@@ -1,143 +1,28 @@
 # rolldown-mdx
 
+[![npm][npm-badge]][npm]
+[![CI][build-badge]][build]
+[![license][license-badge]][license]
+
 The **framework-agnostic**, **runtime-agnostic** MDX bundler powered by [rolldown](https://github.com/rolldown/rolldown).
 
-> Bundle MDX anywhere: Node.js, Deno, Bun, Cloudflare Workers, Vercel Edge, or the browser.
+[npm-badge]: https://img.shields.io/npm/v/rolldown-mdx?logo=npm&color=a855f7
+[npm]: https://www.npmjs.com/package/rolldown-mdx
+[build-badge]: https://img.shields.io/github/actions/workflow/status/thejackshelton/rolldown-mdx/unit-test.yml?branch=main&logo=github&label=CI
+[build]: https://github.com/thejackshelton/rolldown-mdx/actions
+[license-badge]: https://img.shields.io/github/license/thejackshelton/rolldown-mdx?color=blue
+[license]: https://github.com/thejackshelton/rolldown-mdx/blob/main/LICENSE
+
+> Bundle on Node.js, Deno, or Bun — render anywhere. Works with Qwik, React, Solid, Vue, Hono, Brisa, or any JSX-based framework.
 
 ## Why rolldown-mdx?
 
-**rolldown-mdx** is the ultimate solution for bundling MDX content in modern JavaScript applications:
-
-- **Runtime Agnostic** - Runs everywhere: Node.js, Deno, Bun, and edge runtimes. No Node.js-specific APIs holding you back.
-- **Framework Agnostic** - Works with Qwik, Vue, React, Solid, Hono, Brisa, or any JSX-based framework.
-- **Lightning Fast** - Achieves performance comparable to esbuild and mdx-bundler through rolldown's Rust core
-- **Zero Node.js Lock-in** - Built on [unstorage](https://github.com/unjs/unstorage) and other UnJS primitives for true portability
-- **Extensible Pipeline** - Leverage rolldown's powerful plugin API for complete control over the transformation process
+- **Lightning Fast** - Performance comparable to esbuild through rolldown's Rust core
+- **Zero Lock-in** - Built on [unstorage](https://github.com/unjs/unstorage) and UnJS primitives for true portability
+- **Easy Migration** - API compatible with [mdx-bundler](https://github.com/kentcdodds/mdx-bundler) — swap `esbuildOptions` for `rolldown` and you're done
+- **Extensible Pipeline** - Leverage rolldown's plugin API for complete control over transformations
 - **Framework Optimizations** - Hook directly into your framework's compiler during bundling (Qwik, Solid, etc.)
-- **Full MDX Ecosystem** - Compatible with all your favorite MDX plugins and transformations
-
-## Features
-
-### Simplified Framework Integration
-
-Just specify your framework and let rolldown-mdx handle all the configuration:
-
-```js
-import { bundleMDX } from 'rolldown-mdx';
-
-// Qwik
-const result = await bundleMDX({
-  source: mdxSource,
-  framework: 'qwik'
-});
-
-// React
-const result = await bundleMDX({
-  source: mdxSource,
-  framework: 'react'
-});
-
-// Also works with: preact, solid, vue, hono
-```
-
-You can also use a custom JSX configuration if needed:
-
-```js
-const result = await bundleMDX({
-  source: mdxSource,
-  jsxConfig: {
-    jsxLib: { package: 'custom-jsx-lib', varName: 'CustomJSX' },
-    jsxRuntime: { package: 'custom-jsx-lib/jsx-runtime', varName: 'jsx_runtime' }
-  }
-});
-
-// createMDXComponent will still work correctly
-const Component = createMDXComponent(result, CustomJSX);
-```
-
-### Intelligent Component Creation
-
-Create MDX components for your framework with minimal code:
-
-```js
-import { createMDXComponent } from 'rolldown-mdx';
-import * as React from 'react';
-
-// Easy component creation - just pass the result and framework
-const Component = createMDXComponent(result, React);
-
-// Framework is auto-detected from the import!
-```
-
-### Typed for Your Framework
-
-rolldown-mdx exports are deliberately generic, allowing you to provide your own framework-specific types and get precise TypeScript inference:
-
-```ts
-import { createMDXComponent } from 'rolldown-mdx';
-import * as Qwik from '@builder.io/qwik';
-
-// Framework-specific type safety
-const Component = createMDXComponent<Record<string, unknown>, Qwik.JSXOutput>(
-  result,
-  Qwik
-);
-
-// React example
-const ReactComponent = createMDXComponent<React.ComponentProps<'div'>, React.ReactNode>(
-  result, 
-  React
-);
-```
-
-This flexible typing system means you get proper type checking and autocomplete that matches your specific framework.
-
-### Powerful Plugin Ecosystem
-
-Easily extend your MDX processing pipeline with remark and rehype plugins:
-
-```js
-const result = await bundleMDX({
-  source: mdxSource,
-  framework: 'react',
-  mdx: (options) => {
-    options.remarkPlugins = [
-      ...(options.remarkPlugins ?? []),
-      remarkGfm,
-      [remarkCodeHike, { theme: 'github-dark' }]
-    ]
-    options.rehypePlugins = [
-      ...(options.rehypePlugins ?? []),
-      rehypePrism
-    ]
-    return options
-  }
-});
-```
-
-### Framework Compiler Integration
-
-Leverage your framework's compiler optimizations directly in the MDX bundling process:
-
-```js
-import { qwikRollup } from '@builder.io/qwik/optimizer';
-
-const result = await bundleMDX({
-  source: mdxSource,
-  framework: 'qwik',
-  rolldown: {
-    plugins: [qwikRollup()],
-  }
-});
-```
-
-### Built for Performance
-
-rolldown-mdx is built on rolldown's Rust-based architecture, providing:
-
-- Near-native parsing speeds
-- Efficient AST transformations
-- Optimized code generation
+- **Full MDX Ecosystem** - Compatible with all your favorite remark and rehype plugins
 
 ## Installation
 
@@ -170,6 +55,122 @@ const Component = createMDXComponent(result, React);
 <Component />
 ```
 
+## Features
+
+### Simplified Framework Integration
+
+Just specify your framework and let rolldown-mdx handle all the configuration:
+
+```js
+import { bundleMDX } from 'rolldown-mdx';
+
+// Qwik
+const result = await bundleMDX({
+  source: mdxSource,
+  framework: 'qwik'
+});
+
+// React
+const result = await bundleMDX({
+  source: mdxSource,
+  framework: 'react'
+});
+
+// Also works with: preact, solid, vue, hono, brisa
+```
+
+You can also use a custom JSX configuration if needed:
+
+```js
+const result = await bundleMDX({
+  source: mdxSource,
+  jsxConfig: {
+    jsxLib: { package: 'custom-jsx-lib', varName: 'CustomJSX' },
+    jsxRuntime: { package: 'custom-jsx-lib/jsx-runtime', varName: 'jsx_runtime' }
+  }
+});
+
+const Component = createMDXComponent(result, CustomJSX);
+```
+
+### Easy Component Creation
+
+Create MDX components for your framework with minimal code:
+
+```js
+import { createMDXComponent } from 'rolldown-mdx';
+import * as React from 'react';
+
+const Component = createMDXComponent(result, React);
+
+// rolldown-mdx will attempt to auto-detect the framework from the import
+```
+
+### Typed for Your Framework
+
+rolldown-mdx exports are deliberately generic, allowing you to provide your own framework-specific types and get precise TypeScript inference:
+
+```ts
+import { createMDXComponent } from 'rolldown-mdx';
+import * as Qwik from '@builder.io/qwik';
+
+// Qwik example
+const Component = createMDXComponent<Qwik.PropsOf<"div">, Qwik.JSXOutput>(
+  result,
+  Qwik
+);
+
+// React example
+const ReactComponent = createMDXComponent<React.ComponentProps<'div'>, React.ReactNode>(
+  result, 
+  React
+);
+```
+
+This flexible typing system means you get proper type checking and autocomplete that matches your specific framework.
+
+### Powerful Plugin Ecosystem
+
+Easily extend your MDX processing pipeline with remark and rehype plugins:
+
+```js
+const result = await bundleMDX({
+  source: mdxSource,
+  framework: 'react',
+  mdx: (options) => {
+
+    options.remarkPlugins = [
+      ...(options.remarkPlugins ?? []),
+      remarkGfm,
+      [remarkCodeHike, { theme: 'github-dark' }]
+    ]
+
+    options.rehypePlugins = [
+      ...(options.rehypePlugins ?? []),
+      rehypePrism
+    ]
+
+    return options
+  }
+});
+```
+
+### Extensible Plugin System
+
+Add framework compilers, custom transformations, or any Rollup-compatible plugin:
+
+```js
+import { myCustomPlugin } from 'my-plugin';
+
+const result = await bundleMDX({
+  source: mdxSource,
+  framework: 'react',
+  rolldown: {
+    plugins: [myCustomPlugin()], // compilers, transforms, or any Rollup plugin
+  }
+});
+```
+
 ### File Option
 
 Read MDX directly from disk with automatic import resolution:
@@ -193,38 +194,20 @@ const result = await bundleMDX({
 });
 ```
 
-### Runtime Agnostic
+### Multi-Runtime Support
 
-Unlike other MDX bundlers that are locked to Node.js, rolldown-mdx runs **everywhere**:
+No native dependencies — bundle on Node.js, Deno, or Bun:
 
-| Runtime | `source` option | `file` option |
-|---------|-----------------|---------------|
+| Runtime | `bundleMDX()` | `createMDXComponent()` |
+|---------|---------------|------------------------|
 | **Node.js** | ✅ | ✅ |
 | **Deno** | ✅ | ✅ |
 | **Bun** | ✅ | ✅ |
-| **Cloudflare Workers** | ✅ | — |
-| **Vercel Edge** | ✅ | — |
-| **Browser** | ✅ | — |
+| **Cloudflare Workers** | — | ✅ |
+| **Vercel Edge** | — | ✅ |
+| **Browser** | — | ✅ |
 
-The `source` option works universally. The `file` option (reading from disk) works in runtimes with filesystem access.
-
-#### Edge Runtimes (Cloudflare Workers, Vercel Edge, etc.)
-
-```js
-export default {
-  async fetch(request, env) {
-    // Example Fetch MDX from KV, R2, or anywhere
-    const mdxContent = await env.MY_KV.get('posts/hello.mdx');
-    
-    const result = await bundleMDX({
-      source: mdxContent,
-      framework: 'qwik'
-    });
-    
-    return new Response(result.code);
-  }
-}
-```
+Bundle wherever you want, render the result anywhere.
 
 ## License
 
