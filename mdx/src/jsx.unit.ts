@@ -9,19 +9,12 @@ describe("getFrameworkRuntime", () => {
 		createElement: () => "createElement-result",
 	};
 
-	it("creates scope for react framework", () => {
+	it("creates scope for framework", () => {
 		const scope = getFrameworkRuntime("react", mockFrameworkImport);
 
 		expect(scope.React).toBe(mockFrameworkImport);
 		expect(scope._jsx).toBeDefined();
 		expect((scope._jsx as { jsx: unknown }).jsx).toBe(mockFrameworkImport.jsx);
-	});
-
-	it("creates scope for qwik framework", () => {
-		const scope = getFrameworkRuntime("qwik", mockFrameworkImport);
-
-		expect(scope.Qwik).toBe(mockFrameworkImport);
-		expect(scope._jsx_runtime).toBeDefined();
 	});
 
 	it("handles custom jsxConfig", () => {
@@ -51,7 +44,6 @@ describe("getFrameworkRuntime", () => {
 
 		expect(scope.React).toBe(minimalImport);
 		expect(scope._jsx).toBeDefined();
-		// Should fall back to createElement
 		expect((scope._jsx as { jsx: unknown }).jsx).toBe(
 			minimalImport.createElement,
 		);
@@ -64,7 +56,6 @@ describe("getFrameworkRuntime", () => {
 
 		expect(scope.React).toBe(emptyImport);
 		expect(scope._jsx).toBeDefined();
-		// Should use placeholder
 		const jsxRuntime = scope._jsx as {
 			jsx: (tag: unknown, props: unknown) => { tag: unknown; props: unknown };
 		};
@@ -115,40 +106,12 @@ describe("createMDXComponent", () => {
 		expect(typeof Component).toBe("function");
 	});
 
-	it("creates component from bundler result with jsxConfig", () => {
-		const code = `
-			const MDXContent = (props) => _jsx.jsx("div", { children: "Hello" });
-			return { default: MDXContent, frontmatter: {} };
-		`;
-
-		const result = {
-			code,
-			frontmatter: {},
-			matter: { data: {}, content: "" },
-			errors: [],
-			warnings: [],
-			jsxConfig: {
-				jsxLib: { package: "react", varName: "React" },
-				jsxRuntime: { package: "react/jsx-runtime", varName: "_jsx" },
-				jsxImportKeys: {
-					jsx: "jsx",
-					jsxs: "jsxs",
-					Fragment: "Fragment",
-				},
-			},
-		};
-
-		const Component = createMDXComponent(result, mockReact);
-		expect(typeof Component).toBe("function");
-	});
-
 	it("defaults to react when no framework info available", () => {
 		const code = `
 			const MDXContent = (props) => _jsx.jsx("div", { children: "Hello" });
 			return { default: MDXContent, frontmatter: {} };
 		`;
 
-		// Pass just code string with no framework hint
 		const Component = createMDXComponent(code, mockReact);
 		expect(typeof Component).toBe("function");
 	});

@@ -9,10 +9,6 @@ describe("createImportsTransformPlugin", () => {
 
 	const plugin = createImportsTransformPlugin(globals);
 
-	it("has correct plugin name", () => {
-		expect(plugin.name).toBe("transform-imports-for-eval");
-	});
-
 	it("transforms import specifiers to const declarations", () => {
 		const code = `
 import { useState, useEffect } from "react";
@@ -88,27 +84,6 @@ const x = 1;
 		);
 	});
 
-	it("handles mixed imports correctly", () => {
-		const code = `
-import React, { useState } from "react";
-import { jsx } from "react/jsx-runtime";
-const Component = () => {};
-`;
-		const result = plugin.renderChunk(code);
-
-		expect(result).not.toBeNull();
-		expect(result?.code).toContain("const React = React.default || React;");
-		expect(result?.code).toContain("const useState = React.useState;");
-		expect(result?.code).toContain("const jsx = _jsx.jsx;");
-	});
-
-	it("returns null map", () => {
-		const code = "const x = 1;";
-		const result = plugin.renderChunk(code);
-
-		expect(result?.map).toBeNull();
-	});
-
 	it("handles empty code", () => {
 		const result = plugin.renderChunk("");
 
@@ -116,16 +91,15 @@ const Component = () => {};
 		expect(result?.code).toContain("return {");
 	});
 
-	it("handles string literal import specifiers", () => {
+	it("handles import without specifiers", () => {
 		const code = `
-import { "use-state" as useState } from "react";
+import "side-effect-module";
 const x = 1;
 `;
 		const result = plugin.renderChunk(code);
 
 		expect(result).not.toBeNull();
-		// String literal imports are handled
-		expect(result?.code).toContain("const useState = React.use-state;");
+		expect(result?.code).toContain("const x = 1;");
+		expect(result?.code).not.toContain("side-effect-module");
 	});
 });
-

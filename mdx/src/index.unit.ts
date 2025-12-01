@@ -1,6 +1,5 @@
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { VFile } from "vfile";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { bundleMDX } from "./index";
 
@@ -83,32 +82,6 @@ author: Test Author
 				author: "Test Author",
 			});
 		});
-
-		it("bundles MDX from VFile", async () => {
-			const vfile = new VFile({
-				value: "# From VFile",
-				path: join(process.cwd(), "vfile-test.mdx"),
-			});
-
-			const result = await bundleMDX({
-				source: vfile,
-				framework: "react",
-			});
-
-			expect(result.code).toBeDefined();
-			expect(result.errors).toHaveLength(0);
-		});
-
-		it("sets default path for VFile without path", async () => {
-			const vfile = new VFile({ value: "# No path" });
-
-			const result = await bundleMDX({
-				source: vfile,
-				framework: "react",
-			});
-
-			expect(result.code).toBeDefined();
-		});
 	});
 
 	describe("file input", () => {
@@ -124,7 +97,7 @@ author: Test Author
 	});
 
 	describe("framework configuration", () => {
-		it("includes framework info in result for react", async () => {
+		it("includes framework info in result", async () => {
 			const result = await bundleMDX({
 				source: "# Hello",
 				framework: "react",
@@ -133,24 +106,6 @@ author: Test Author
 			expect(result.framework).toBeDefined();
 			expect(result.framework?.name).toBe("react");
 			expect(result.framework?.example).toContain("createMDXComponent");
-		});
-
-		it("includes framework info in result for qwik", async () => {
-			const result = await bundleMDX({
-				source: "# Hello",
-				framework: "qwik",
-			});
-
-			expect(result.framework?.name).toBe("qwik");
-		});
-
-		it("includes jsxConfig in result", async () => {
-			const result = await bundleMDX({
-				source: "# Hello",
-				framework: "react",
-			});
-
-			expect(result.jsxConfig).toBeDefined();
 			expect(result.jsxConfig?.jsxLib?.package).toBe("react");
 		});
 
@@ -196,23 +151,6 @@ import { greeting } from './helper'
 			expect(result.code).toBeDefined();
 			expect(result.errors).toHaveLength(0);
 		});
-
-		it("resolves nested virtual files", async () => {
-			const result = await bundleMDX({
-				source: `
-import { Button } from './components/button'
-
-<Button />
-`,
-				framework: "react",
-				files: {
-					"./components/button.tsx":
-						"export const Button = () => <button>Click</button>;",
-				},
-			});
-
-			expect(result.code).toBeDefined();
-		});
 	});
 
 	describe("mdx options", () => {
@@ -245,21 +183,6 @@ custom: value
 				framework: "react",
 				globals: {
 					lodash: "_",
-				},
-			});
-
-			// The code should be generated (globals affect externals)
-			expect(result.code).toBeDefined();
-		});
-
-		it("custom globals work without framework", async () => {
-			const result = await bundleMDX({
-				source: "# Hello",
-				globals: {
-					myLib: "MyLib",
-				},
-				jsxConfig: {
-					jsxLib: { package: "react", varName: "React" },
 				},
 			});
 

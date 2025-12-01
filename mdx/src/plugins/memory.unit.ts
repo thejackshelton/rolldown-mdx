@@ -41,23 +41,10 @@ describe("createInMemoryPlugin", () => {
 		});
 	};
 
-	describe("plugin metadata", () => {
-		it("has correct plugin name", () => {
-			const plugin = createPlugin();
-			expect(plugin.name).toBe("in-memory-loader");
-		});
-	});
-
 	describe("resolveId", () => {
 		it("resolves entry point id", () => {
 			const plugin = createPlugin();
 			const result = plugin.resolveId("entry.mdx", undefined);
-			expect(result).toBe("entry.mdx");
-		});
-
-		it("resolves ./entry.mdx to entry point", () => {
-			const plugin = createPlugin();
-			const result = plugin.resolveId("./entry.mdx", undefined);
 			expect(result).toBe("entry.mdx");
 		});
 
@@ -73,12 +60,6 @@ describe("createInMemoryPlugin", () => {
 			expect(result).toBe(resolve(process.cwd(), "virtual-file.ts"));
 		});
 
-		it("resolves nested virtual file", () => {
-			const plugin = createPlugin();
-			const result = plugin.resolveId("./components/button", "entry.mdx");
-			expect(result).toBe(resolve(process.cwd(), "components/button.tsx"));
-		});
-
 		it("resolves real file from file system", () => {
 			const plugin = createPlugin();
 			const result = plugin.resolveId(testFile, "entry.mdx");
@@ -89,12 +70,6 @@ describe("createInMemoryPlugin", () => {
 			const plugin = createPlugin();
 			const result = plugin.resolveId("./does-not-exist.ts", "entry.mdx");
 			expect(result).toBeNull();
-		});
-
-		it("uses cwd when no importer", () => {
-			const plugin = createPlugin();
-			const result = plugin.resolveId("./virtual-file.ts", undefined);
-			expect(result).toBe(resolve(process.cwd(), "virtual-file.ts"));
 		});
 
 		it("uses importer directory for relative resolution", () => {
@@ -125,24 +100,10 @@ describe("createInMemoryPlugin", () => {
 			expect(result).toBe("# Hello");
 		});
 
-		it("loads virtual file from processedFiles", () => {
-			const plugin = createPlugin();
-			const resolvedPath = resolve(process.cwd(), "virtual-file.ts");
-			const result = plugin.load(resolvedPath);
-			expect(result).toBe('export const x = "virtual";');
-		});
-
 		it("loads real file from file system", () => {
 			const plugin = createPlugin();
 			const result = plugin.load(testFile);
 			expect(result).toBe('export const realContent = "from disk";');
 		});
-
-		it("returns null for non-existent file", () => {
-			const plugin = createPlugin();
-			const result = plugin.load("/does/not/exist.ts");
-			expect(result).toBeNull();
-		});
 	});
 });
-

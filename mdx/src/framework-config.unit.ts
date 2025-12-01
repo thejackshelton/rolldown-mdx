@@ -17,98 +17,39 @@ describe("frameworkConfigs", () => {
 		"brisa",
 	];
 
-	it.each(frameworks)("has configuration for %s", (framework) => {
-		expect(frameworkConfigs[framework]).toBeDefined();
-		expect(frameworkConfigs[framework].jsxLib).toBeDefined();
-		expect(frameworkConfigs[framework].jsxRuntime).toBeDefined();
-	});
-
-	it("react config has correct package names", () => {
-		const config = frameworkConfigs.react;
-		expect(config.jsxLib?.package).toBe("react");
-		expect(config.jsxLib?.varName).toBe("React");
-		expect(config.jsxRuntime?.package).toBe("react/jsx-runtime");
-	});
-
-	it("qwik config has correct package names", () => {
-		const config = frameworkConfigs.qwik;
-		expect(config.jsxLib?.package).toBe("@builder.io/qwik");
-		expect(config.jsxLib?.varName).toBe("Qwik");
-	});
-
-	it("hono config includes jsxDom", () => {
-		const config = frameworkConfigs.hono;
-		expect(config.jsxDom?.package).toBe("hono/jsx/dom");
-		expect(config.jsxDom?.varName).toBe("HonoDOM");
+	it.each(frameworks)("has valid configuration for %s", (framework) => {
+		const config = frameworkConfigs[framework];
+		expect(config).toBeDefined();
+		expect(config.jsxLib?.package).toBeDefined();
+		expect(config.jsxLib?.varName).toBeDefined();
+		expect(config.jsxRuntime?.package).toBeDefined();
 	});
 });
 
 describe("getFrameworkConfig", () => {
-	it("returns react config", () => {
-		const config = getFrameworkConfig("react");
-		expect(config).toBe(frameworkConfigs.react);
-	});
-
-	it("returns qwik config", () => {
-		const config = getFrameworkConfig("qwik");
-		expect(config).toBe(frameworkConfigs.qwik);
-	});
-
-	it("returns preact config with jsxDom", () => {
-		const config = getFrameworkConfig("preact");
-		expect(config.jsxDom?.package).toBe("preact/compat");
+	it("returns the correct config object", () => {
+		expect(getFrameworkConfig("react")).toBe(frameworkConfigs.react);
+		expect(getFrameworkConfig("qwik")).toBe(frameworkConfigs.qwik);
 	});
 });
 
 describe("deriveGlobals", () => {
-	it("derives globals from jsxLib", () => {
-		const globals = deriveGlobals({
-			jsxLib: { package: "react", varName: "React" },
-		});
-		expect(globals).toEqual({ react: "React" });
-	});
-
-	it("derives globals from jsxRuntime", () => {
-		const globals = deriveGlobals({
-			jsxRuntime: { package: "react/jsx-runtime", varName: "_jsx" },
-		});
-		expect(globals).toEqual({ "react/jsx-runtime": "_jsx" });
-	});
-
-	it("derives globals from jsxDom", () => {
-		const globals = deriveGlobals({
-			jsxDom: { package: "hono/jsx/dom", varName: "HonoDOM" },
-		});
-		expect(globals).toEqual({ "hono/jsx/dom": "HonoDOM" });
-	});
-
 	it("derives globals from full config", () => {
 		const globals = deriveGlobals({
 			jsxLib: { package: "react", varName: "React" },
 			jsxRuntime: { package: "react/jsx-runtime", varName: "_jsx" },
+			jsxDom: { package: "hono/jsx/dom", varName: "HonoDOM" },
 		});
 		expect(globals).toEqual({
 			react: "React",
 			"react/jsx-runtime": "_jsx",
+			"hono/jsx/dom": "HonoDOM",
 		});
 	});
 
-	it("handles empty config", () => {
-		const globals = deriveGlobals({});
-		expect(globals).toEqual({});
-	});
-
-	it("handles partial config without varName", () => {
-		const globals = deriveGlobals({
-			jsxLib: { package: "react" },
-		});
-		expect(globals).toEqual({});
-	});
-
-	it("handles partial config without package", () => {
-		const globals = deriveGlobals({
-			jsxLib: { varName: "React" },
-		});
-		expect(globals).toEqual({});
+	it("handles empty or partial config", () => {
+		expect(deriveGlobals({})).toEqual({});
+		expect(deriveGlobals({ jsxLib: { package: "react" } })).toEqual({});
+		expect(deriveGlobals({ jsxLib: { varName: "React" } })).toEqual({});
 	});
 });

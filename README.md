@@ -11,7 +11,7 @@ The **framework-agnostic**, **runtime-agnostic** MDX bundler powered by [rolldow
 [npm]: https://www.npmjs.com/package/rolldown-mdx
 [build-badge]: https://img.shields.io/github/actions/workflow/status/thejackshelton/rolldown-mdx/ci.yml?branch=main&logo=github&label=CI
 [build]: https://github.com/thejackshelton/rolldown-mdx/actions
-[codecov-badge]: https://codecov.io/github/thejackshelton/rolldown-mdx/graph/badge.svg?token=YOUR_CODECOV_TOKEN
+[codecov-badge]: https://codecov.io/github/thejackshelton/rolldown-mdx/graph/badge.svg
 [codecov]: https://codecov.io/github/thejackshelton/rolldown-mdx
 [license-badge]: https://img.shields.io/github/license/thejackshelton/rolldown-mdx?color=blue
 [license]: https://github.com/thejackshelton/rolldown-mdx/blob/main/LICENSE
