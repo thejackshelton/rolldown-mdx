@@ -3,14 +3,11 @@ import { render } from "vitest-browser-qwik";
 
 export const framework = "qwik" as const;
 
-// biome-ignore lint/suspicious/noExplicitAny: Dynamic component types
-type ComponentType = any;
-// biome-ignore lint/suspicious/noExplicitAny: Dynamic props types
-type PropsType = any;
+type AnyComponent = (props: Record<string, unknown>) => unknown;
 
 export const getRenderContext = () => ({
 	render,
-	createElement: (Component: ComponentType, props?: PropsType) =>
-		Qwik.jsx(Component, props ?? {}),
+	jsx: (Component: AnyComponent, props?: Record<string, unknown>) =>
+		Qwik.jsx(Component as Qwik.Component, props ?? {}),
 	Runtime: Qwik,
 });

@@ -2,11 +2,10 @@ import { describe, expect, test } from "vitest";
 import { commands } from "vitest/browser";
 import { framework, getRenderContext } from "#setup";
 import { createMDXComponent } from "../src/jsx";
-import "./vitest-commands.d.ts";
 
 describe("bundleMDX browser tests", () => {
 	test("renders counter and can interact with it", async () => {
-		const { render, createElement, Runtime } = await getRenderContext();
+		const { render, jsx, Runtime } = await getRenderContext();
 
 		const result = await commands.bundle({
 			source: `
@@ -16,14 +15,14 @@ import { Counter } from "./counter.tsx"
 
 <Counter />
 `.trim(),
-			files: { "./counter.tsx": "__COUNTER__" },
+			files: { "./counter.tsx": "@counter" },
 			framework,
 		});
 
 		expect(result.errors).toEqual([]);
 
 		const Component = createMDXComponent(result, Runtime);
-		const screen = await render(createElement(Component));
+		const screen = await render(jsx(Component));
 
 		await expect.element(screen.getByText("Count: 0")).toBeVisible();
 		await screen.getByRole("button", { name: "Increment" }).click();
@@ -31,7 +30,7 @@ import { Counter } from "./counter.tsx"
 	});
 
 	test("renders greeting component", async () => {
-		const { render, createElement, Runtime } = await getRenderContext();
+		const { render, jsx, Runtime } = await getRenderContext();
 
 		const result = await commands.bundle({
 			source: `
@@ -41,20 +40,20 @@ import { Greeting } from "./greeting.tsx"
 
 <Greeting name="Vitest" />
 `.trim(),
-			files: { "./greeting.tsx": "__GREETING__" },
+			files: { "./greeting.tsx": "@greeting" },
 			framework,
 		});
 
 		expect(result.errors).toEqual([]);
 
 		const Component = createMDXComponent(result, Runtime);
-		const screen = await render(createElement(Component));
+		const screen = await render(jsx(Component));
 
 		await expect.element(screen.getByText("Hello, Vitest!")).toBeVisible();
 	});
 
 	test("renders both components together", async () => {
-		const { render, createElement, Runtime } = await getRenderContext();
+		const { render, jsx, Runtime } = await getRenderContext();
 
 		const result = await commands.bundle({
 			source: `
@@ -67,8 +66,8 @@ import { Greeting } from "./greeting.tsx"
 <Counter />
 `.trim(),
 			files: {
-				"./counter.tsx": "__COUNTER__",
-				"./greeting.tsx": "__GREETING__",
+				"./counter.tsx": "@counter",
+				"./greeting.tsx": "@greeting",
 			},
 			framework,
 		});
@@ -76,7 +75,7 @@ import { Greeting } from "./greeting.tsx"
 		expect(result.errors).toEqual([]);
 
 		const Component = createMDXComponent(result, Runtime);
-		const screen = await render(createElement(Component));
+		const screen = await render(jsx(Component));
 
 		await expect.element(screen.getByText("Hello, Browser!")).toBeVisible();
 		await expect.element(screen.getByText("Count: 0")).toBeVisible();
@@ -123,8 +122,8 @@ import { MyDemo } from './my-demo'
 <MyDemo />
 `.trim(),
 			files: {
-				"./my-demo.tsx": "__MY_DEMO__",
-				"./sub/my-sub.tsx": "__MY_SUB__",
+				"./my-demo.tsx": "@myDemo",
+				"./sub/my-sub.tsx": "@mySub",
 			},
 			framework,
 		});
@@ -143,7 +142,7 @@ import config from "./config.json";
 
 App: {config.appName}
 `.trim(),
-			files: { "./config.json": "__CONFIG_JSON__" },
+			files: { "./config.json": "@config" },
 			framework,
 		});
 
@@ -161,7 +160,7 @@ import { formatMessage, GREETING_PREFIX } from "./helpers";
 export const message = formatMessage("Test");
 export const prefix = GREETING_PREFIX;
 `.trim(),
-			files: { "./helpers.ts": "__HELPERS__" },
+			files: { "./helpers.ts": "@helpers" },
 			framework,
 		});
 
@@ -183,7 +182,7 @@ export default function mockedClsx(...args) {
   return "mocked-clsx-was-definitely-used";
 };
 `.trim(),
-				"./my-test-component.tsx": "__CLSX_TEST__",
+				"./my-test-component.tsx": "@clsxTestComponent",
 			},
 			framework,
 		});
@@ -223,7 +222,7 @@ This is nested MDX content!
 
 describe("comprehensive smoke test", () => {
 	test("complex component with multiple features", async () => {
-		const { render, createElement, Runtime } = await getRenderContext();
+		const { render, jsx, Runtime } = await getRenderContext();
 
 		const result = await commands.bundle({
 			source: `
@@ -244,8 +243,8 @@ Here's a **powered** demo:
 <Another />
 `.trim(),
 			files: {
-				"./my-demo.tsx": "__SMOKE_DEMO__",
-				"./sub/my-sub-dir.tsx": "__MY_SUB_DIR__",
+				"./my-demo.tsx": "@smokeDemo",
+				"./sub/my-sub-dir.tsx": "@mySubDir",
 				"./some-js-module.js": `
 export function someJsFunction() {
   return "Hello from JS Module!";
@@ -278,7 +277,7 @@ This is another MDX component!
 		expect(frontmatter.description).toBe("This is some meta-data");
 
 		const Component = createMDXComponent(result, Runtime);
-		const screen = await render(createElement(Component));
+		const screen = await render(jsx(Component));
 
 		await expect.element(screen.getByText("This is the title")).toBeVisible();
 		await expect.element(screen.getByText("Demo Content")).toBeVisible();

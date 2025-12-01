@@ -1,19 +1,27 @@
 import type { Locator } from "vitest/browser";
+import type { BundleMDXResult } from "../src/index";
 
+// Render result from vitest-browser-*
 interface RenderResult {
 	getByText(text: string | RegExp): Locator;
 	getByRole(role: string, options?: { name?: string | RegExp }): Locator;
 	container: HTMLElement;
 }
 
-declare module "vitest-browser-qwik" {
-	export function render(element: unknown): Promise<RenderResult>;
+// Browser command types
+interface BundleOptions {
+	source: string;
+	files?: Record<string, string>;
+	framework: "qwik" | "react";
 }
 
-declare module "vitest-browser-react" {
-	export function render(element: unknown): Promise<RenderResult>;
+declare module "vitest/browser" {
+	interface BrowserCommands {
+		bundle: (options: BundleOptions) => Promise<BundleMDXResult>;
+	}
 }
 
+// Vitest assertion extensions
 declare module "vitest" {
 	interface Assertion<T> {
 		toBeVisible(): Promise<void>;

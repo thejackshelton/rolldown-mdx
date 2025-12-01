@@ -1,13 +1,44 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { BrowserCommand } from "vitest/node";
 import { bundleMDX } from "../src/index";
+import * as qwikFixtures from "./qwik/fixtures";
+import * as reactFixtures from "./react/fixtures";
 
 const testsDir = __dirname;
 
-// Read shared test files
-const configJson = readFileSync(join(testsDir, "data/config.json"), "utf-8");
-const helpersCode = readFileSync(join(testsDir, "utils/helpers.ts"), "utf-8");
+const sharedFixtures: Record<string, string> = {
+	config: "data/config.json",
+	helpers: "utils/helpers.ts",
+};
+
+const frameworkFixtures = {
+	qwik: qwikFixtures,
+	react: reactFixtures,
+} as const;
+
+function resolveFixture(ref: string, framework: "qwik" | "react"): string {
+	const frameworkDir = join(testsDir, framework);
+
+	const frameworkFile = join(frameworkDir, `${ref}.tsx`);
+	if (existsSync(frameworkFile)) {
+		return readFileSync(frameworkFile, "utf-8");
+	}
+
+	if (sharedFixtures[ref]) {
+		return readFileSync(join(testsDir, sharedFixtures[ref]), "utf-8");
+	}
+
+	const fixtures = frameworkFixtures[framework];
+	const fixtureKey = `${ref}Code` as keyof typeof fixtures;
+	if (fixtureKey in fixtures) {
+		return fixtures[fixtureKey] as string;
+	}
+
+	throw new Error(
+		`Unknown fixture reference: @${ref} for framework: ${framework}`,
+	);
+}
 
 interface BundleOptions {
 	source: string;
@@ -19,43 +50,20 @@ export const bundle: BrowserCommand<[BundleOptions]> = async (
 	_ctx,
 	options,
 ) => {
-	const frameworkDir = join(testsDir, options.framework);
-
-	// Read framework-specific component files
-	const counterCode = readFileSync(join(frameworkDir, "counter.tsx"), "utf-8");
-	const greetingCode = readFileSync(
-		join(frameworkDir, "greeting.tsx"),
-		"utf-8",
-	);
-
-	// Import framework-specific fixtures
-	const fixtures =
-		options.framework === "qwik"
-			? await import("./qwik/fixtures")
-			: await import("./react/fixtures");
-
-	// Replace placeholders in files with actual code
 	const processedFiles: Record<string, string> = {};
-	for (const [key, value] of Object.entries(options.files || {})) {
-		let processed = value;
-		if (processed === "__COUNTER__") processed = counterCode;
-		else if (processed === "__GREETING__") processed = greetingCode;
-		else if (processed === "__CONFIG_JSON__") processed = configJson;
-		else if (processed === "__HELPERS__") processed = helpersCode;
-		else if (processed === "__MY_DEMO__") processed = fixtures.myDemoCode;
-		else if (processed === "__MY_SUB__") processed = fixtures.mySubCode;
-		else if (processed === "__SMOKE_DEMO__") processed = fixtures.smokeDemoCode;
-		else if (processed === "__MY_SUB_DIR__") processed = fixtures.mySubDirCode;
-		else if (processed === "__CLSX_TEST__")
-			processed = fixtures.clsxTestComponentCode;
-		processedFiles[key] = processed;
+
+	for (const [path, value] of Object.entries(options.files || {})) {
+		if (value.startsWith("@")) {
+			const ref = value.slice(1);
+			processedFiles[path] = resolveFixture(ref, options.framework);
+		} else {
+			processedFiles[path] = value;
+		}
 	}
 
-	const result = await bundleMDX({
+	return bundleMDX({
 		source: options.source,
 		files: processedFiles,
 		framework: options.framework,
 	});
-
-	return result;
 };

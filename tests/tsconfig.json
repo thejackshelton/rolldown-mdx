@@ -3,13 +3,10 @@
 	"compilerOptions": {
 		"isolatedDeclarations": false,
 		"noUnusedLocals": false,
-		"lib": ["es2023", "dom"]
+		"lib": ["es2023", "dom"],
+		"paths": {
+			"#setup": ["./qwik/setup.ts"]
+		}
 	},
-	"include": [
-		"./**/*.ts",
-		"./**/*.tsx",
-		"./vitest-browser.d.ts",
-		"./vitest-commands.d.ts",
-		"./setup.d.ts"
-	]
+	"include": ["./**/*.ts", "./**/*.tsx", "./vitest.d.ts"]
 }
