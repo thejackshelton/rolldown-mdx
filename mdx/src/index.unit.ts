@@ -190,6 +190,49 @@ custom: value
 		});
 	});
 
+	describe("error handling", () => {
+		it("throws on malformed JSX", async () => {
+			await expect(
+				bundleMDX({
+					source: `
+# Broken JSX
+
+<div>
+  <span>Unclosed tag
+</div>
+`,
+					framework: "react",
+				}),
+			).rejects.toThrow();
+		});
+
+		it("throws on invalid import path", async () => {
+			await expect(
+				bundleMDX({
+					source: `
+import { NonExistent } from "./does-not-exist.tsx"
+
+<NonExistent />
+`,
+					framework: "react",
+				}),
+			).rejects.toThrow();
+		});
+
+		it("throws on invalid MDX syntax", async () => {
+			await expect(
+				bundleMDX({
+					source: `
+# Title
+
+{invalid javascript ( missing closing }
+`,
+					framework: "react",
+				}),
+			).rejects.toThrow();
+		});
+	});
+
 	describe("output format", () => {
 		it("returns matter with data and content", async () => {
 			const result = await bundleMDX({
