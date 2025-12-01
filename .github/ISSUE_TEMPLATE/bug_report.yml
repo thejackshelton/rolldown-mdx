@@ -1,0 +1,63 @@
+name: 🐞 Bug Report
+description: Something doesn't work or is flaky! Let us know!
+title: '[🐞]'
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report!
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Which API is affected?
+      options:
+        - bundleMDX
+        - createMDXComponent
+        - Framework Integration (Qwik, React, etc.)
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the bug
+      description: A clear and concise description of what you expected to happen instead. If you intend to submit a PR for this issue, tell us in the description. Thanks!
+      placeholder: I am doing ... What I expect is ... What actually happening is ...
+    validations:
+      required: true
+
+  - type: input
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: A [minimal reproduction](https://stackoverflow.com/help/minimal-reproducible-example) is required ([Why?](https://antfu.me/posts/why-reproductions-are-required)).
+      placeholder: Reproduction URL
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction-steps
+    attributes:
+      label: Steps to reproduce
+      description: Please provide any reproduction steps that may need to be described.
+      placeholder: Run `pnpm install` followed by `pnpm dev`
+
+  - type: textarea
+    id: system-info
+    attributes:
+      label: System Info
+      description: Output of `npx envinfo --system --npmPackages 'rolldown-mdx,rolldown,vite,typescript' --binaries --browsers`
+      render: shell
+      placeholder: System, Binaries, Browsers
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional_information
+    attributes:
+      label: Additional Information
+    validations:
+      required: false
+
