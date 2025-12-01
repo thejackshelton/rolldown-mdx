@@ -1,24 +1,24 @@
 {
 	"compilerOptions": {
 		"target": "esnext",
-		"lib": ["es2023"],
+		"lib": ["es2023", "dom"],
 		"moduleDetection": "force",
 		"module": "preserve",
 		"moduleResolution": "bundler",
 		"resolveJsonModule": true,
+		"jsx": "preserve",
 		"types": ["node"],
 		"strict": true,
-		"noUnusedLocals": true,
-		"declaration": true,
-		"isolatedDeclarations": true,
+		"isolatedDeclarations": false,
+		"noUnusedLocals": false,
 		"esModuleInterop": true,
 		"isolatedModules": true,
 		"verbatimModuleSyntax": true,
-		"skipLibCheck": true
+		"skipLibCheck": true,
+		"paths": {
+			"#setup": ["./qwik/setup.ts"],
+			"rolldown-mdx": ["../mdx/src/index.ts"]
+		}
 	},
-	"references": [
-		{ "path": "./mdx" },
-		{ "path": "./tests" }
-	],
-	"files": []
+	"include": ["./**/*.ts", "./**/*.tsx", "./vitest.d.ts"]
 }

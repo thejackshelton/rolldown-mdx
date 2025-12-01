@@ -28,6 +28,18 @@
 			"recommended": true
 		}
 	},
+	"overrides": [
+		{
+			"includes": ["tests/react/**"],
+			"linter": {
+				"rules": {
+					"suspicious": {
+						"noReactSpecificProps": "off"
+					}
+				}
+			}
+		}
+	],
 	"javascript": {
 		"formatter": {
 			"quoteStyle": "double"

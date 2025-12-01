@@ -1,0 +1,63 @@
+{
+	"name": "rolldown-mdx",
+	"version": "0.3.0",
+	"description": "The framework-agnostic, runtime-agnostic MDX bundler powered by rolldown",
+	"type": "module",
+	"license": "MIT",
+	"homepage": "https://github.com/thejackshelton/rolldown-mdx#readme",
+	"bugs": {
+		"url": "https://github.com/thejackshelton/rolldown-mdx/issues"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/thejackshelton/rolldown-mdx.git"
+	},
+	"author": "Jack Shelton",
+	"funding": "https://github.com/sponsors/thejackshelton",
+	"files": [
+		"dist"
+	],
+	"main": "./dist/index.js",
+	"module": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		".": "./dist/index.js",
+		"./package.json": "./package.json"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"scripts": {
+		"build": "tsdown",
+		"dev": "tsdown --watch",
+		"typecheck": "tsc --noEmit"
+	},
+	"devDependencies": {
+		"@types/node": "24.9.0",
+		"astring": "^1.9.0",
+		"tsdown": "0.17.0-beta.3",
+		"typescript": "^5.8.3"
+	},
+	"dependencies": {
+		"@mdx-js/rollup": "^3.1.1",
+		"front-matter": "^4.0.2",
+		"oxc-parser": "^0.99.0",
+		"pathe": "^2.0.3",
+		"remark-frontmatter": "^5.0.0",
+		"remark-mdx-frontmatter": "^5.2.0",
+		"rolldown": "1.0.0-beta.52",
+		"vfile": "^6.0.3"
+	},
+	"engines": {
+		"node": ">=20.18.0"
+	},
+	"//peerDependencies": "Qwik requires its compiler. In React/Solid/Vue projects, this is ignored - no warnings, no install needed.",
+	"peerDependencies": {
+		"@builder.io/qwik": "^1.17.0"
+	},
+	"peerDependenciesMeta": {
+		"@builder.io/qwik": {
+			"optional": true
+		}
+	}
+}
