@@ -8,7 +8,7 @@ The **framework-agnostic**, **runtime-agnostic** MDX bundler powered by [rolldow
 
 [npm-badge]: https://img.shields.io/npm/v/rolldown-mdx?logo=npm&color=a855f7
 [npm]: https://www.npmjs.com/package/rolldown-mdx
-[build-badge]: https://img.shields.io/github/actions/workflow/status/thejackshelton/rolldown-mdx/unit-test.yml?branch=main&logo=github&label=CI
+[build-badge]: https://img.shields.io/github/actions/workflow/status/thejackshelton/rolldown-mdx/ci.yml?branch=main&logo=github&label=CI
 [build]: https://github.com/thejackshelton/rolldown-mdx/actions
 [license-badge]: https://img.shields.io/github/license/thejackshelton/rolldown-mdx?color=blue
 [license]: https://github.com/thejackshelton/rolldown-mdx/blob/main/LICENSE
