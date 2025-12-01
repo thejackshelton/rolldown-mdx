@@ -1,0 +1,25 @@
+{
+	"name": "@rolldown-mdx/tests",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"test": "vitest",
+		"typecheck": "tsc --noEmit"
+	},
+	"devDependencies": {
+		"@builder.io/qwik": "^1.17.0",
+		"@types/node": "24.9.0",
+		"@vitest/browser-playwright": "^4.0.14",
+		"clsx": "^2.1.1",
+		"react": "^19.1.0",
+		"react-dom": "^19.1.0",
+		"typescript": "^5.8.3",
+		"vitest": "^4.0.14",
+		"vitest-browser-qwik": "^0.1.0",
+		"vitest-browser-react": "^2.0.2"
+	},
+	"dependencies": {
+		"rolldown-mdx": "workspace:*"
+	}
+}

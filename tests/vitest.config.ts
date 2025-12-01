@@ -2,7 +2,7 @@ import { resolve } from "node:path";
 import { qwikVite } from "@builder.io/qwik/optimizer";
 import { playwright } from "@vitest/browser-playwright";
 import { defineConfig, type ViteUserConfig } from "vitest/config";
-import { bundle } from "./tests/commands";
+import { bundle } from "./commands";
 
 const createConfig = (
 	name: "qwik" | "react",
@@ -13,12 +13,13 @@ const createConfig = (
 	esbuild,
 	resolve: {
 		alias: {
-			"#setup": resolve(__dirname, `tests/${name}/setup.ts`),
+			"#setup": resolve(__dirname, `${name}/setup.ts`),
+			"rolldown-mdx": resolve(__dirname, "../mdx/src/jsx.ts"),
 		},
 	},
 	test: {
 		name,
-		include: ["tests/test.tsx"],
+		include: ["test.tsx"],
 		env: { VITEST_PROJECT_NAME: name },
 		browser: {
 			enabled: true,
@@ -32,7 +33,7 @@ const createConfig = (
 export default defineConfig({
 	test: {
 		projects: [
-			createConfig("qwik", [qwikVite()]),
+			createConfig("qwik", [qwikVite({ srcDir: "./qwik" })]),
 			createConfig("react", [], { jsx: "automatic" }),
 		],
 	},

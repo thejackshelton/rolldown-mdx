@@ -16,9 +16,5 @@
 		"verbatimModuleSyntax": true,
 		"skipLibCheck": true
 	},
-	"references": [
-		{ "path": "./mdx" },
-		{ "path": "./tests" }
-	],
-	"files": []
+	"include": ["src"]
 }

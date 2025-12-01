@@ -1,9 +1,19 @@
 {
-	"extends": "../tsconfig.json",
 	"compilerOptions": {
+		"target": "esnext",
+		"lib": ["es2023", "dom"],
+		"moduleDetection": "force",
+		"module": "preserve",
+		"moduleResolution": "bundler",
+		"resolveJsonModule": true,
+		"types": ["node"],
+		"strict": true,
 		"isolatedDeclarations": false,
 		"noUnusedLocals": false,
-		"lib": ["es2023", "dom"],
+		"esModuleInterop": true,
+		"isolatedModules": true,
+		"verbatimModuleSyntax": true,
+		"skipLibCheck": true,
 		"paths": {
 			"#setup": ["./qwik/setup.ts"]
 		}

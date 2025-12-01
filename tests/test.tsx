@@ -1,7 +1,7 @@
+import { createMDXComponent } from "rolldown-mdx";
 import { describe, expect, test } from "vitest";
 import { commands } from "vitest/browser";
 import { framework, getRenderContext } from "#setup";
-import { createMDXComponent } from "../src/jsx";
 
 describe("bundleMDX browser tests", () => {
 	test("renders counter and can interact with it", async () => {

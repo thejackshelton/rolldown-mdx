@@ -1,5 +1,5 @@
 import type { Locator } from "vitest/browser";
-import type { BundleMDXResult } from "../src/index";
+import type { BundleMDXResult } from "rolldown-mdx";
 
 // Render result from vitest-browser-*
 interface RenderResult {

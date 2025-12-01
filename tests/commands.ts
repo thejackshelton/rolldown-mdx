@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { BrowserCommand } from "vitest/node";
-import { bundleMDX } from "../src/index";
+import { bundleMDX } from "rolldown-mdx";
 import * as qwikFixtures from "./qwik/fixtures";
 import * as reactFixtures from "./react/fixtures";
 
