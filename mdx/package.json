@@ -1,6 +1,6 @@
 {
 	"name": "rolldown-mdx",
-	"version": "0.6.6",
+	"version": "0.6.7",
 	"description": "The framework-agnostic, runtime-agnostic MDX bundler powered by rolldown",
 	"type": "module",
 	"license": "MIT",
