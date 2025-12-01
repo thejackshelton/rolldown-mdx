@@ -1,5 +1,8 @@
 name: CI
 
+permissions:
+  contents: read
+
 on:
   push:
     branches: [main]
@@ -13,17 +16,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4.1.0
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
 
-      - name: Set node LTS
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: lts/*
+          node-version: 24
           cache: pnpm
 
       - name: Install
-        run: pnpm install
+        run: pnpm install --frozen-lockfile --prefer-offline
 
       - name: Lint
         run: pnpm run lint
@@ -37,30 +40,40 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
-        node: [20, 22, 24]
       fail-fast: false
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4.1.0
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
 
-      - name: Set node ${{ matrix.node }}
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node }}
-          cache: pnpm
+          node-version: 24
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
 
       - name: Install
-        run: pnpm install
+        run: pnpm install --frozen-lockfile --prefer-offline
 
       - name: Get Playwright version
         id: playwright-version
         shell: bash
         run: |
-          VERSION=$(jq -r '.devDependencies."@vitest/browser-playwright"' tests/package.json | tr -d '^~')
+          VERSION=$(jq -r '.devDependencies."@playwright/test"' tests/package.json | tr -d '^~')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Cache Playwright browsers

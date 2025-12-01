@@ -9,6 +9,7 @@
 	},
 	"devDependencies": {
 		"@builder.io/qwik": "^1.17.0",
+		"@playwright/test": "^1.57.0",
 		"@types/node": "24.9.0",
 		"@vitejs/plugin-react": "^5.1.1",
 		"@vitest/browser-playwright": "^4.0.14",
