@@ -1,0 +1,17 @@
+name: 📖 README Suggestion
+description: Suggestions on how we can improve the README.
+title: '[📖]'
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this suggestion! However, if you think it's something you can fix yourself, please submit a PR instead.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Suggestion
+      description: A clear and concise description of your suggestion to improve the README.
+    validations:
+      required: true
+
