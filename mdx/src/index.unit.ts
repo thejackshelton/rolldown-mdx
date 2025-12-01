@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { VFile } from "vfile";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { bundleMDX } from "./index";
 
@@ -81,6 +82,35 @@ author: Test Author
 				title: "My Title",
 				author: "Test Author",
 			});
+		});
+
+		it("accepts VFile as source", async () => {
+			const vfile = new VFile({
+				value: "# Hello from VFile",
+				path: "/virtual/test.mdx",
+			});
+
+			const result = await bundleMDX({
+				source: vfile,
+				framework: "react",
+			});
+
+			expect(result.code).toBeDefined();
+			expect(result.errors).toHaveLength(0);
+		});
+
+		it("handles VFile without path", async () => {
+			const vfile = new VFile({
+				value: "# No path VFile",
+			});
+
+			const result = await bundleMDX({
+				source: vfile,
+				framework: "react",
+			});
+
+			expect(result.code).toBeDefined();
+			expect(result.errors).toHaveLength(0);
 		});
 	});
 
@@ -183,6 +213,108 @@ custom: value
 				framework: "react",
 				globals: {
 					lodash: "_",
+				},
+			});
+
+			expect(result.code).toBeDefined();
+		});
+	});
+
+	describe("debug mode", () => {
+		it("runs without error when debug is enabled", async () => {
+			const result = await bundleMDX({
+				source: "# Debug Test",
+				framework: "react",
+				debug: true,
+			});
+
+			expect(result.code).toBeDefined();
+			expect(result.errors).toHaveLength(0);
+		});
+
+		it("logs debug info for file input", async () => {
+			const result = await bundleMDX({
+				file: mdxFile,
+				framework: "react",
+				debug: true,
+			});
+
+			expect(result.code).toBeDefined();
+		});
+
+		it("logs debug info for VFile input", async () => {
+			const vfile = new VFile({
+				value: "# VFile Debug",
+				path: "/test/debug.mdx",
+			});
+
+			const result = await bundleMDX({
+				source: vfile,
+				framework: "react",
+				debug: true,
+			});
+
+			expect(result.code).toBeDefined();
+		});
+	});
+
+	describe("rolldown options", () => {
+		it("accepts custom rolldown plugins", async () => {
+			const customPlugin = {
+				name: "test-plugin",
+				transform(code: string) {
+					return code;
+				},
+			};
+
+			const result = await bundleMDX({
+				source: "# Plugin Test",
+				framework: "react",
+				rolldown: {
+					plugins: [customPlugin],
+				},
+			});
+
+			expect(result.code).toBeDefined();
+		});
+
+		it("accepts single rolldown plugin (not array)", async () => {
+			const customPlugin = {
+				name: "single-plugin",
+				transform(code: string) {
+					return code;
+				},
+			};
+
+			const result = await bundleMDX({
+				source: "# Single Plugin",
+				framework: "react",
+				rolldown: {
+					plugins: customPlugin,
+				},
+			});
+
+			expect(result.code).toBeDefined();
+		});
+
+		it("accepts custom external array", async () => {
+			const result = await bundleMDX({
+				source: "# External Test",
+				framework: "react",
+				rolldown: {
+					external: ["some-external-package"],
+				},
+			});
+
+			expect(result.code).toBeDefined();
+		});
+
+		it("accepts custom external function", async () => {
+			const result = await bundleMDX({
+				source: "# External Fn Test",
+				framework: "react",
+				rolldown: {
+					external: (id) => id.includes("external"),
 				},
 			});
 
