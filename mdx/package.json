@@ -15,7 +15,8 @@
 	"author": "Jack Shelton",
 	"funding": "https://github.com/sponsors/thejackshelton",
 	"files": [
-		"dist"
+		"dist",
+		"README.md"
 	],
 	"main": "./dist/index.js",
 	"module": "./dist/index.js",

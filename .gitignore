@@ -4,6 +4,3 @@ dist
 *.log
 .DS_Store
 .eslintcache
-
-# Copied during release
-mdx/README.md
