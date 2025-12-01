@@ -50,5 +50,14 @@
 	},
 	"engines": {
 		"node": ">=20.18.0"
+	},
+	"//peerDependencies": "Qwik requires its compiler. In React/Solid/Vue projects, this is ignored - no warnings, no install needed.",
+	"peerDependencies": {
+		"@builder.io/qwik": "^1.17.0"
+	},
+	"peerDependenciesMeta": {
+		"@builder.io/qwik": {
+			"optional": true
+		}
 	}
 }

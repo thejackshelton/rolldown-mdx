@@ -17,6 +17,9 @@ importers:
 
   mdx:
     dependencies:
+      '@builder.io/qwik':
+        specifier: ^1.17.0
+        version: 1.17.2(vite@7.2.4(@types/node@24.9.0)(jiti@2.6.1)(yaml@2.8.2))
       '@mdx-js/rollup':
         specifier: ^3.1.1
         version: 3.1.1(rollup@4.53.3)

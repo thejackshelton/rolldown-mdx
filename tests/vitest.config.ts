@@ -20,6 +20,7 @@ const createConfig = (
 	test: {
 		name,
 		include: ["test.tsx"],
+		testTimeout: 2000,
 		env: { VITEST_PROJECT_NAME: name },
 		browser: {
 			enabled: true,
