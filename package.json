@@ -9,7 +9,7 @@
 		"dev": "pnpm -C mdx dev",
 		"test": "pnpm -C tests test",
 		"typecheck": "pnpm -r typecheck",
-		"release": "pnpm -C mdx build && bumpp mdx/package.json && pnpm -C mdx publish",
+		"release": "pnpm -C mdx build && bumpp mdx/package.json && pnpm publish --filter rolldown-mdx",
 		"check": "biome ci .",
 		"check.format": "biome format .",
 		"check.lint": "biome check .",
