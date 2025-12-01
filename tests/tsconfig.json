@@ -1,0 +1,15 @@
+{
+	"extends": "../tsconfig.json",
+	"compilerOptions": {
+		"isolatedDeclarations": false,
+		"noUnusedLocals": false,
+		"lib": ["es2023", "dom"]
+	},
+	"include": [
+		"./**/*.ts",
+		"./**/*.tsx",
+		"./vitest-browser.d.ts",
+		"./vitest-commands.d.ts",
+		"./setup.d.ts"
+	]
+}

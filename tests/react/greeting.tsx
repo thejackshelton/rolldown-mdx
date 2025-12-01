@@ -8,4 +8,3 @@ export const Greeting = ({ name = "World" }: GreetingProps) => {
 
 export default Greeting;
 
-

@@ -3,9 +3,11 @@
 	"compilerOptions": {
 		"jsx": "react-jsx",
 		"jsxImportSource": "react",
-		"declaration": false,
-		"isolatedDeclarations": false
+		"isolatedDeclarations": false,
+		"noImplicitAny": false,
+		"strict": false,
+		"skipLibCheck": true
 	},
-	"include": ["."]
+	"include": ["./**/*.tsx", "./react.d.ts"]
 }
 
