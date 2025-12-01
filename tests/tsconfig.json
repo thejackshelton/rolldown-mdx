@@ -6,6 +6,7 @@
 		"module": "preserve",
 		"moduleResolution": "bundler",
 		"resolveJsonModule": true,
+		"jsx": "preserve",
 		"types": ["node"],
 		"strict": true,
 		"isolatedDeclarations": false,
@@ -15,7 +16,8 @@
 		"verbatimModuleSyntax": true,
 		"skipLibCheck": true,
 		"paths": {
-			"#setup": ["./qwik/setup.ts"]
+			"#setup": ["./qwik/setup.ts"],
+			"rolldown-mdx": ["../mdx/src/index.ts"]
 		}
 	},
 	"include": ["./**/*.ts", "./**/*.tsx", "./vitest.d.ts"]

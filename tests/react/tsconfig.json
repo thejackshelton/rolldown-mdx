@@ -1,13 +1,8 @@
 {
-	"extends": "../../tsconfig.json",
+	"extends": "../tsconfig.json",
 	"compilerOptions": {
 		"jsx": "react-jsx",
-		"jsxImportSource": "react",
-		"isolatedDeclarations": false,
-		"noImplicitAny": false,
-		"strict": false,
-		"skipLibCheck": true
+		"jsxImportSource": "react"
 	},
-	"include": ["./**/*.tsx", "./react.d.ts"]
+	"include": ["./**/*.ts", "./**/*.tsx", "./react.d.ts"]
 }
-
