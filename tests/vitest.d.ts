@@ -1,18 +1,30 @@
+import type { BundleMDXResult, SupportedFramework } from "rolldown-mdx";
 import type { Locator } from "vitest/browser";
-import type { BundleMDXResult } from "rolldown-mdx";
 
-// Render result from vitest-browser-*
-interface RenderResult {
+/**
+ * Frameworks that have test implementations.
+ * This is a subset of SupportedFramework from the library.
+ */
+export type TestedFramework = Extract<SupportedFramework, "qwik" | "react">;
+
+/**
+ * Generic MDX component type returned by createMDXComponent.
+ * Props default to Record<string, unknown>, return type is unknown.
+ */
+export type MDXComponent<Props = Record<string, unknown>> = (props: Props) => unknown;
+
+/** Render result from vitest-browser-* */
+export interface RenderResult {
 	getByText(text: string | RegExp): Locator;
 	getByRole(role: string, options?: { name?: string | RegExp }): Locator;
 	container: HTMLElement;
 }
 
-// Browser command types
-interface BundleOptions {
+/** Browser command options - derives framework type from library */
+export interface BundleOptions {
 	source: string;
 	files?: Record<string, string>;
-	framework: "qwik" | "react";
+	framework: TestedFramework;
 }
 
 declare module "vitest/browser" {

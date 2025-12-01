@@ -2,22 +2,25 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { BrowserCommand } from "vitest/node";
 import { bundleMDX } from "rolldown-mdx";
+import type { BundleOptions, TestedFramework } from "./vitest.d.ts";
 import * as qwikFixtures from "./qwik/fixtures";
 import * as reactFixtures from "./react/fixtures";
 
 const testsDir = __dirname;
 
-const sharedFixtures: Record<string, string> = {
+const sharedFixtures = {
 	config: "data/config.json",
 	helpers: "utils/helpers.ts",
-};
+} as const satisfies Record<string, string>;
 
-const frameworkFixtures = {
+type FixtureModule = Record<string, string>;
+
+const frameworkFixtures: Record<TestedFramework, FixtureModule> = {
 	qwik: qwikFixtures,
 	react: reactFixtures,
-} as const;
+};
 
-function resolveFixture(ref: string, framework: "qwik" | "react"): string {
+function resolveFixture(ref: string, framework: TestedFramework): string {
 	const frameworkDir = join(testsDir, framework);
 
 	const frameworkFile = join(frameworkDir, `${ref}.tsx`);
@@ -25,25 +28,20 @@ function resolveFixture(ref: string, framework: "qwik" | "react"): string {
 		return readFileSync(frameworkFile, "utf-8");
 	}
 
-	if (sharedFixtures[ref]) {
-		return readFileSync(join(testsDir, sharedFixtures[ref]), "utf-8");
+	if (ref in sharedFixtures) {
+		const sharedPath = sharedFixtures[ref as keyof typeof sharedFixtures];
+		return readFileSync(join(testsDir, sharedPath), "utf-8");
 	}
 
 	const fixtures = frameworkFixtures[framework];
-	const fixtureKey = `${ref}Code` as keyof typeof fixtures;
+	const fixtureKey = `${ref}Code`;
 	if (fixtureKey in fixtures) {
-		return fixtures[fixtureKey] as string;
+		return fixtures[fixtureKey];
 	}
 
 	throw new Error(
 		`Unknown fixture reference: @${ref} for framework: ${framework}`,
 	);
-}
-
-interface BundleOptions {
-	source: string;
-	files?: Record<string, string>;
-	framework: "qwik" | "react";
 }
 
 export const bundle: BrowserCommand<[BundleOptions]> = async (
@@ -52,7 +50,7 @@ export const bundle: BrowserCommand<[BundleOptions]> = async (
 ) => {
 	const processedFiles: Record<string, string> = {};
 
-	for (const [path, value] of Object.entries(options.files || {})) {
+	for (const [path, value] of Object.entries(options.files ?? {})) {
 		if (value.startsWith("@")) {
 			const ref = value.slice(1);
 			processedFiles[path] = resolveFixture(ref, options.framework);

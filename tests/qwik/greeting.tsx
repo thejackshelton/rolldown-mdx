@@ -11,4 +11,3 @@ export const Greeting: Component<GreetingProps> = component$<GreetingProps>(
 );
 
 export default Greeting;
-
