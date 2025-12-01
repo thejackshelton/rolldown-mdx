@@ -1,5 +1,6 @@
 import { resolve } from "node:path";
-import { qwikVite } from "@builder.io/qwik/optimizer";
+import { qwikVite as qwik } from "@builder.io/qwik/optimizer";
+import react from "@vitejs/plugin-react";
 import { playwright } from "@vitest/browser-playwright";
 import { defineConfig, type ViteUserConfig } from "vitest/config";
 import { bundle } from "./commands";
@@ -7,10 +8,8 @@ import { bundle } from "./commands";
 const createConfig = (
 	name: "qwik" | "react",
 	plugins: ViteUserConfig["plugins"],
-	esbuild?: ViteUserConfig["esbuild"],
 ) => ({
 	plugins,
-	esbuild,
 	resolve: {
 		alias: {
 			"#setup": resolve(__dirname, `${name}/setup.ts`),
@@ -34,8 +33,8 @@ const createConfig = (
 export default defineConfig({
 	test: {
 		projects: [
-			createConfig("qwik", [qwikVite({ srcDir: "./qwik" })]),
-			createConfig("react", [], { jsx: "automatic" }),
+			createConfig("qwik", [qwik({ srcDir: "./qwik" })]),
+			createConfig("react", [react()]),
 		],
 	},
 });
