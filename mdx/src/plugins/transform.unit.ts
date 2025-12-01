@@ -102,4 +102,26 @@ const x = 1;
 		expect(result?.code).toContain("const x = 1;");
 		expect(result?.code).not.toContain("side-effect-module");
 	});
+
+	it("handles parenthesized expressions", () => {
+		const code = `
+const x = (1 + 2);
+const y = ((a) => a * 2);
+`;
+		const result = plugin.renderChunk(code);
+
+		expect(result).not.toBeNull();
+		expect(result?.code).toContain("(1 + 2)");
+	});
+
+	it("handles string literal imports", () => {
+		const code = `
+import { "kebab-case" as kebabCase } from "react";
+const x = 1;
+`;
+		const result = plugin.renderChunk(code);
+
+		expect(result).not.toBeNull();
+		expect(result?.code).toContain("const kebabCase = React.kebab-case;");
+	});
 });

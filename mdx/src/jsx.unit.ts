@@ -115,4 +115,26 @@ describe("createMDXComponent", () => {
 		const Component = createMDXComponent(code, mockReact);
 		expect(typeof Component).toBe("function");
 	});
+
+	it("uses jsxConfig from bundler result when no framework name", () => {
+		const code = `
+			const MDXContent = (props) => _jsx.jsx("div", { children: "Hello" });
+			return { default: MDXContent, frontmatter: {} };
+		`;
+
+		const result = {
+			code,
+			frontmatter: {},
+			matter: { data: {}, content: "" },
+			errors: [],
+			warnings: [],
+			jsxConfig: {
+				jsxLib: { package: "react", varName: "React" },
+				jsxRuntime: { package: "react/jsx-runtime", varName: "_jsx" },
+			},
+		};
+
+		const Component = createMDXComponent(result, mockReact);
+		expect(typeof Component).toBe("function");
+	});
 });

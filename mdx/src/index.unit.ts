@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { VFile } from "vfile";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { bundleMDX } from "./index";
 
@@ -81,6 +82,35 @@ author: Test Author
 				title: "My Title",
 				author: "Test Author",
 			});
+		});
+
+		it("accepts VFile as source", async () => {
+			const vfile = new VFile({
+				value: "# Hello from VFile",
+				path: "/virtual/test.mdx",
+			});
+
+			const result = await bundleMDX({
+				source: vfile,
+				framework: "react",
+			});
+
+			expect(result.code).toBeDefined();
+			expect(result.errors).toHaveLength(0);
+		});
+
+		it("handles VFile without path", async () => {
+			const vfile = new VFile({
+				value: "# No path VFile",
+			});
+
+			const result = await bundleMDX({
+				source: vfile,
+				framework: "react",
+			});
+
+			expect(result.code).toBeDefined();
+			expect(result.errors).toHaveLength(0);
 		});
 	});
 
